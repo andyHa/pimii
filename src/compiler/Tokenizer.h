@@ -1,0 +1,112 @@
+//
+// Created by Andreas Haufler on 28.11.18.
+//
+
+#ifndef MEM_TOKENIZER_H
+#define MEM_TOKENIZER_H
+
+#include <deque>
+#include "../vm/ObjectPointer.h"
+
+namespace pimii {
+
+    class BufferedReader {
+        std::string_view input;
+        size_t pos;
+    public:
+        explicit BufferedReader(std::string_view input) : input(input), pos(0) {};
+
+        char current();
+
+        char next();
+
+        char offset(size_t offset);
+
+        char consume();
+
+    };
+
+    enum TokenType {
+        NAME,
+        COLON_NAME,
+        LITERAL_STRING,
+        LITERAL_NUMBER,
+        LITERAL_HEX,
+        LITERAL_BINARY,
+        LITERAL_FLOAT,
+        LITERAL_SYMBOL,
+        ASSIGNMENT,
+        OPERATOR,
+        COLON,
+        SEMICOLON,
+        CARET,
+        FULLSTOP,
+        L_BRACKET,
+        R_BRACKET,
+        LA_BRACKET,
+        RA_BRACKET,
+        LC_BRACKET,
+        RC_BRACKET,
+        INVALID,
+        EOI
+    };
+
+    struct Error {
+        Offset lineNumber;
+        std::string message;
+
+        Error(Offset lineNumber, std::string message) : lineNumber(lineNumber), message(std::move(message)) {}
+    };
+
+    struct Token {
+        Offset lineNumber;
+        TokenType type;
+        std::string value;
+
+        bool isEOI() {
+            return type == EOI;
+        }
+
+//        Token(Offset lineNumber, TokenType type, std::string value) : lineNumber(lineNumber), type(type),
+//                                                                      value(std::move(value)) {};
+
+    };
+
+    class Tokenizer {
+        std::string_view input;
+        std::deque<Token> bufferedTokens;
+        std::vector<Error> &errors;
+        BufferedReader reader;
+        Offset line;
+
+        Token fetch();
+
+        void skipWhitespaces();
+
+        Token readName();
+
+        Token readNumber();
+
+        bool isOperator(char ch);
+
+        Token readString();
+
+    public:
+        Tokenizer(std::string_view input, std::vector<Error> &errors) : input(input), reader(input), line(1),
+                                                                        errors(errors) {}
+
+        Token current();
+
+        Token next();
+
+        Token offset(size_t offset);
+
+        Token consume();
+
+        Offset currentLine();
+    };
+
+}
+
+
+#endif //MEM_TOKENIZER_H
