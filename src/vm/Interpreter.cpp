@@ -103,6 +103,9 @@ namespace pimii {
             case OP_JUMP_ON_FALSE:
                 handleJump(opCode, index);
                 return;
+            case OP_BLOCK_COPY:
+                performBlockCopy(index);
+                return;
         }
 
         if (index == 0b111) {
@@ -154,6 +157,8 @@ namespace pimii {
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS:
+                system.debug(ObjectPointer(method));
+
                 if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 2)) {
                     send(system.getSpecialSelector(index), 2);
                 }
@@ -423,6 +428,17 @@ namespace pimii {
                 }
                 return;
         }
+    }
+
+    void Interpreter::performBlockCopy(uint8_t blockArgumentCount) {
+        Object *newContext = system.getMemoryManager().allocObject(
+                activeContext->size, system.getTypeSystem().blockContextType);
+
+        newContext->fields[Interpreter::CONTEXT_INITIAL_IP_FIELD] = ObjectPointer(
+                instructionPointer + 2);
+        newContext->fields[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = ObjectPointer(blockArgumentCount);
+        newContext->fields[Interpreter::CONTEXT_HOME_FIELD] = ObjectPointer(homeContext);
+        push(ObjectPointer(newContext));
     }
 
 

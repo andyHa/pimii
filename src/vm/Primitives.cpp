@@ -223,18 +223,24 @@ namespace pimii {
             return false;
         }
 
+        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
+
         interpreter.transfer(argumentCount,
                              interpreter.getActiveContext(),
-                             interpreter.getStackBasePointer() + interpreter.getStackPointer() - argumentCount + 1,
+                             interpreter.getStackBasePointer() + interpreter.getStackPointer() - argumentCount,
                              block, Interpreter::CONTEXT_FIXED_SIZE);
 
         interpreter.pop(argumentCount + 1);
+
+        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
 
         block->fields[Interpreter::CONTEXT_IP_FIELD] = ObjectPointer(
                 block->fields[Interpreter::CONTEXT_INITIAL_IP_FIELD].getInt());
         block->fields[Interpreter::CONTEXT_SP_FIELD] = ObjectPointer(argumentCount);
         block->fields[Interpreter::CONTEXT_CALLER_FIELD] = ObjectPointer(interpreter.getActiveContext());
+//        interpreter.getSystem().debug(ObjectPointer(block));
         interpreter.newActiveContext(block);
+        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
         return true;
     }
 

@@ -22,7 +22,7 @@ namespace pimii {
 
         std::unique_ptr<Statement> statement();
 
-        std::unique_ptr<Expression> expression();
+        std::unique_ptr<Expression> expression(bool acceptColonSelectors);
 
         std::unique_ptr<Expression> atom();
 

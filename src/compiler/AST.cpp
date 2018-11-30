@@ -135,17 +135,20 @@ namespace pimii {
     }
 
     void Block::emitByteCodes(EmitterContext &ctx) {
-        ctx.pushTemporaries(temporaries);
-
-        for (auto &statement : statements) {
-            statement->emitByteCodes(ctx);
-        }
-
-        ctx.popTemporaries(temporaries.size());
+        ctx.pushCompound(Interpreter::OP_BLOCK_COPY, temporaries.size());
+        Offset jmpAddr = ctx.pushJumpPlaceholder();
+        emitInner(ctx);
+        ctx.pushSingle(Interpreter::OP_RETURN_STACK_TO_TO_CALLER_INDEX);
+        ctx.insertJump(jmpAddr, Interpreter::OP_JUMP_ALWAYS, ctx.nextOpCodePosition() - jmpAddr - 2);
     }
 
     void Block::emitInner(EmitterContext &context) {
         context.pushTemporaries(temporaries);
+
+        for (auto i = 0; i < temporaries.size(); i++) {
+            context.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY,
+                                  (Offset) context.getTemporaries().size() - i);
+        }
 
         for (auto &statement : statements) {
             statement->emitByteCodes(context);

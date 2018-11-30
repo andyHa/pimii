@@ -94,6 +94,7 @@ namespace pimii {
             *dest = b;
             dest++;
         }
+
         return ObjectPointer(method);
     }
 

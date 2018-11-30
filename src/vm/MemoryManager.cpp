@@ -17,6 +17,7 @@ namespace pimii {
 
         auto result = (ByteBuffer *) malloc(
                 sizeof(Offset) + sizeof(ObjectPointer) + sizeof(Offset) + sizeof(Word) * numberOfWords);
+  //          memset(result, 0, sizeof(Offset) + sizeof(ObjectPointer) + sizeof(Offset) + sizeof(Word) * numberOfWords);
         result->type = type;
         result->size = numberOfWords;
         result->odd = odd == 0 ? 0 : sizeof(Word) - odd;

@@ -17,8 +17,10 @@ int main() {
 //    }
 //
     pimii::System sys;
-    pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.", pimii::Nil::NIL);
+    //pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.", pimii::Nil::NIL);
+    pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
     pimii::ObjectPointer method = compiler.compile(sys);
+    sys.debug(method);
     pimii::Interpreter interpreter(sys);
 //
 //    std::vector<pimii::ObjectPointer> literals;

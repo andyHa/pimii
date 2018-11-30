@@ -41,6 +41,12 @@ namespace pimii {
         const ObjectPointer falseValue;
 
         ObjectPointer getType(ObjectPointer obj);
+
+        std::string info(ObjectPointer obj);
+
+        void debug(ObjectPointer obj);
+
+        void debugCompiledMethod(ObjectPointer method);
     };
 
 }

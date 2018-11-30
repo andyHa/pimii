@@ -81,6 +81,7 @@ namespace pimii {
         static inline const uint8_t OP_JUMP_ON_FALSE = 19;
         static inline const uint8_t OP_JUMP_ALWAYS = 20;
         static inline const uint8_t OP_JUMP_BACK = 21;
+        static inline const uint8_t OP_BLOCK_COPY = 22;
 
         static inline const uint8_t LAST_PREFERRED_PRIMITIVE_SELECTOR = 23;
 
@@ -147,6 +148,8 @@ namespace pimii {
         bool executePrimitive(Offset index, Offset numberOfArguments);
 
         void handleJump(uint8_t code, uint8_t index);
+
+        void performBlockCopy(uint8_t index);
     };
 
 }

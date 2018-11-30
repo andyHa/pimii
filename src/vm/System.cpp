@@ -2,9 +2,11 @@
 // Created by Andreas Haufler on 25.11.18.
 //
 
+#include <iostream>
 #include "System.h"
 #include "Nil.h"
 #include "Primitives.h"
+#include "Methods.h"
 
 namespace pimii {
 
@@ -51,12 +53,12 @@ namespace pimii {
         specialSelectors->fields[15] = symbols.lookup("value:");
         specialSelectors->fields[16] = symbols.lookup("value:value:");
         specialSelectors->fields[17] = symbols.lookup("value:value:value:");
-        specialSelectors->fields[18] = symbols.lookup("values:");
+        specialSelectors->fields[18] = symbols.lookup("withArgs:");
         specialSelectors->fields[19] = symbols.lookup("perform:");
         specialSelectors->fields[20] = symbols.lookup("perform:with:");
         specialSelectors->fields[21] = symbols.lookup("perform:with:and:");
         specialSelectors->fields[22] = symbols.lookup("perform:with:and:and:");
-        specialSelectors->fields[23] = symbols.lookup("perform:withArray:");
+        specialSelectors->fields[23] = symbols.lookup("perform:withArgs:");
 
         // From now on, these selectors are sent to the receiver (and might still invoke a primitive)
         // but might also be overwritten by a class.
@@ -122,5 +124,80 @@ namespace pimii {
         }
 
         return -1;
+    }
+
+    std::string System::info(ObjectPointer obj) {
+        if (obj == Nil::NIL) {
+            return "nil";
+        }
+        switch (obj.getObjectPointerType()) {
+            case OBJECT:
+                if (obj.getObject()->type.getObjectPointerType() == OBJECT && obj.getObject()->type != Nil::NIL &&
+                    obj.getObject()->type.getObject()->fields[TypeSystem::TYPE_FIELD_NAME].getObjectPointerType() ==
+                    BYTES) {
+                    return "(" + std::string(
+                            obj.getObject()->type.getObject()->fields[TypeSystem::TYPE_FIELD_NAME].getBytes()->bytes) +
+                           ")";
+                } else {
+                    return "?";
+                }
+            case SMALL_INT:
+                return std::to_string(obj.getInt());
+            case BYTES:
+                if (obj.getBytes()->type == types.stringType) {
+                    return std::string(obj.getBytes()->bytes);
+                };
+                if (obj.getBytes()->type == types.symbolType) {
+                    return "#" + std::string(obj.getBytes()->bytes);
+                };
+                return "Bytes: " + std::to_string(obj.getBytes()->size * sizeof(Word) - obj.getBytes()->odd);
+        }
+
+        return "??";
+    }
+
+    void System::debug(ObjectPointer obj) {
+        if (obj == Nil::NIL) {
+            std::cout << "nil" << std::endl;
+        }
+        if (obj.getObjectPointerType() == OBJECT) {
+            if (obj.getObject()->type == types.compiledMethodType) {
+                debugCompiledMethod(obj);
+                return;
+            }
+            //   std::cout << obj.getObject()->type.getObject()->fields[TypeSystem::TYPE_FIELD_NAME].getBytes()->bytes
+            //             << std::endl;
+            std::cout << "---------------" << std::endl;
+            for (auto i = 0; i < obj.getObject()->size; i++) {
+                if (obj == Nil::NIL) {
+                    std::cout << "nil" << std::endl;
+                } else {
+                    std::cout << info(obj.getObject()->fields[i]) << std::endl;
+                }
+
+            }
+            std::cout << "---------------" << std::endl << std::endl;
+        } else {
+            std::cout << info(obj) << std::endl;
+        }
+    }
+
+    void System::debugCompiledMethod(ObjectPointer method) {
+        std::cout << "Method" << std::endl;
+        std::cout << "---------------" << std::endl;
+        for (auto i = Interpreter::COMPILED_METHOD_FIELD_LITERALS_START; i < method.getObject()->size; i++) {
+            std::cout << info(method.getObject()->fields[i]) << std::endl;
+
+        }
+        std::cout << "---------------" << std::endl;
+        ByteBuffer *opcodes = method.getObject()->fields[Interpreter::COMPILED_METHOD_FIELD_OPCODES].getBytes();
+        for (auto i = 0; i < opcodes->size * sizeof(Word) - opcodes->odd; i++) {
+            std::cout << std::to_string(i) << ": " << std::to_string(opcodes->bytes[i] & 0b11111) << " "
+                      << std::to_string((opcodes->bytes[i] & 0b11100000) >> 5) << " - "
+                      << std::to_string(opcodes->bytes[i])
+                      << std::endl;
+        }
+        std::cout << "---------------" << std::endl << std::endl;
+
     }
 }

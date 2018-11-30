@@ -26,6 +26,10 @@ namespace pimii {
 
         const std::vector<ObjectPointer>& getLiterals() const;
 
+        const std::vector<std::string>& getTemporaries() const {
+            return temporaries;
+        };
+
         const std::vector<uint8_t>& getOpCodes() const;
 
         void pushTemporaries(const std::vector<std::string>& temporariesToPush);
@@ -33,6 +37,8 @@ namespace pimii {
         void pushTemporary(const std::string& temporary);
 
         void popTemporaries(size_t numTemporaries);
+
+
 
         int findTemporaryIndex(std::string &name);
 

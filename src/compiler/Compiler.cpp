@@ -123,7 +123,7 @@ namespace pimii {
                 }
             }
 
-            return std::unique_ptr<Expression>(new Return(expression()));
+            return std::unique_ptr<Expression>(new Return(expression(true)));
         }
 
         if (tokenizer.current().type == NAME && tokenizer.next().type == ASSIGNMENT) {
@@ -133,14 +133,14 @@ namespace pimii {
                 std::unique_ptr<Assignment> assignment(new Assignment());
                 assignment->name = tokenizer.consume().value;
                 tokenizer.consume();
-                assignment->expression = expression();
+                assignment->expression = expression(true);
                 return assignment;
             }
         }
-        return expression();
+        return expression(true);
     }
 
-    std::unique_ptr<Expression> Compiler::expression() {
+    std::unique_ptr<Expression> Compiler::expression(bool acceptColonSelectors) {
         std::unique_ptr<Expression> currentReceiver = atom();
         while (true) {
             if (tokenizer.current().type == NAME) {
@@ -151,7 +151,7 @@ namespace pimii {
                 currentReceiver = binaryCall(std::move(currentReceiver));
             }
 
-            if (tokenizer.current().type == COLON_NAME) {
+            if (tokenizer.current().type == COLON_NAME && acceptColonSelectors) {
                 currentReceiver = selectorCall(std::move(currentReceiver));
             }
 
@@ -167,7 +167,7 @@ namespace pimii {
 
         if (tokenizer.current().type == L_BRACKET) {
             tokenizer.consume();
-            std::unique_ptr<Expression> result = expression();
+            std::unique_ptr<Expression> result = expression(true);
             if (tokenizer.current().type != R_BRACKET) {
                 errors.emplace_back(Error(tokenizer.currentLine(), ("Unexpected Token '" + tokenizer.current().value +
                                                                     "'. Expected ')'.")));
@@ -272,7 +272,12 @@ namespace pimii {
     }
 
     std::unique_ptr<Expression> Compiler::unaryCall(std::unique_ptr<Expression> receiver) {
-        return receiver;
+        auto call = new MethodCall();
+        call->receiver = std::move(receiver);
+        call->selector = tokenizer.consume().value;
+        call->arguments.emplace_back(atom());
+
+        return std::unique_ptr<Expression>(call);
     }
 
     std::unique_ptr<Expression> Compiler::binaryCall(std::unique_ptr<Expression> receiver) {
@@ -289,7 +294,7 @@ namespace pimii {
         call->receiver = std::move(receiver);
         while(tokenizer.current().type == COLON_NAME) {
             call->selector += tokenizer.consume().value;
-            call->arguments.emplace_back(expression());
+            call->arguments.emplace_back(expression(false));
         }
         return std::unique_ptr<Expression>(call);
     }

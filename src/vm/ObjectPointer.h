@@ -19,8 +19,7 @@ namespace pimii {
     enum ObjectPointerType : Word {
         OBJECT = 0,
         SMALL_INT = 1,
-        BYTES = 2,
-        WORDS = 3
+        BYTES = 2
     };
 
     struct Object;
@@ -98,7 +97,6 @@ namespace pimii {
 
 
     struct Object {
-        Offset gcFlags;
         Offset size;
         ObjectPointer type;
         ObjectPointer fields[];
@@ -107,14 +105,10 @@ namespace pimii {
     };
 
     struct ByteBuffer {
-        Offset gcFlags;
         Offset size;
         ObjectPointer type;
         Offset odd;
-        union {
             char bytes[];
-            char32_t chars[];
-        };
     };
 
 
