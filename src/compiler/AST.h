@@ -42,12 +42,29 @@ namespace pimii {
 
         void pushSingle(uint8_t opcode);
 
+        void pushCompound(uint8_t opcode, int index);
+
         void pushWithIndex(uint8_t opcode, int index);
 
+        Offset nextOpCodePosition();
+
+        Offset pushJumpPlaceholder();
+
+        void pushJump(uint8_t opcode, Offset delta);
+
+        void insertJump(Offset index, uint8_t opcode, Offset delta);
+
+
+    };
+
+    enum StatementType {
+        STMT_OTHER,
+        STMT_BLOCK
     };
 
     struct Statement {
         virtual void emitByteCodes(EmitterContext &ctx) = 0;
+        virtual StatementType type() const { return STMT_OTHER; }
     };
 
     struct Expression : public Statement {
@@ -86,8 +103,9 @@ namespace pimii {
 
     struct BuiltinConstant : public Expression {
         uint8_t opcode;
+        uint8_t compound;
     public:
-        BuiltinConstant(uint8_t opcode) : opcode(opcode) {}
+        BuiltinConstant(uint8_t opcode, uint8_t compound) : opcode(opcode), compound(compound) {}
 
         void emitByteCodes(EmitterContext &ctx) override;
     };
@@ -98,6 +116,7 @@ namespace pimii {
         LiteralSymbol(std::string name) : name(std::move(name)) {}
 
         void emitByteCodes(EmitterContext &ctx) override;
+
     };
 
     struct LiteralString : public Expression {
@@ -123,6 +142,8 @@ namespace pimii {
         bool callSuper;
 
         void emitByteCodes(EmitterContext &ctx) override;
+    private:
+        bool emitOptimizedControlFlow(EmitterContext &ctx);
     };
 
 
@@ -136,6 +157,9 @@ namespace pimii {
         std::vector<std::unique_ptr<Statement>> statements;
 
         void emitByteCodes(EmitterContext &ctx) override;
+        StatementType  type() const override { return STMT_BLOCK; };
+
+        void emitInner(EmitterContext &context);
     };
 
 

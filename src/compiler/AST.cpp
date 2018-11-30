@@ -2,6 +2,7 @@
 // Created by Andreas Haufler on 28.11.18.
 //
 
+#include <iostream>
 #include "AST.h"
 #include "../vm/Interpreter.h"
 #include "../vm/Strings.h"
@@ -10,7 +11,7 @@
 namespace pimii {
 
     void BuiltinConstant::emitByteCodes(EmitterContext &ctx) {
-        ctx.pushSingle(opcode);
+        ctx.pushCompound(opcode, compound);
     }
 
     void Assignment::emitByteCodes(EmitterContext &ctx) {
@@ -19,15 +20,15 @@ namespace pimii {
         int offset = ctx.findTemporaryIndex(name);
         if (offset < 0) {
             //TODO error
-            ctx.pushSingle(Interpreter::OP_PUSH_NIL);
+            ctx.pushSingle(Interpreter::OP_PUSH);
         } else {
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY, offset);
         }
     }
 
     void PushGlobal::emitByteCodes(EmitterContext &ctx) {
-        ObjectPointer symbol = ctx.getSystem().getSymbolTable().lookup(name);
-        ObjectPointer association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
+        auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
+        auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
         Offset index = ctx.findOrAddLiteral(association);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_VARIABLE, index);
     }
@@ -45,6 +46,11 @@ namespace pimii {
     void EmitterContext::pushSingle(uint8_t opcode) {
         opcodes.push_back(opcode);
     }
+
+    void EmitterContext::pushCompound(uint8_t opcode, int index) {
+        opcodes.push_back(opcode | (uint8_t) (index << 5));
+    }
+
 
     void EmitterContext::pushWithIndex(uint8_t opcode, int index) {
         if (index > 255 || index < 0) {
@@ -75,7 +81,7 @@ namespace pimii {
     }
 
     void EmitterContext::pushTemporaries(const std::vector<std::string> &temporariesToPush) {
-        temporaries.insert(temporaries.begin(), temporariesToPush.begin(), temporariesToPush.end());
+        temporaries.insert(temporaries.end(), temporariesToPush.begin(), temporariesToPush.end());
         maxTemporaries = std::max(maxTemporaries, (Offset) temporaries.size());
     }
 
@@ -85,7 +91,10 @@ namespace pimii {
     }
 
     void EmitterContext::popTemporaries(size_t numTemporaries) {
-        temporaries.erase(temporaries.begin(), temporaries.end() - numTemporaries);
+        if (numTemporaries == 0) {
+            return;
+        }
+        temporaries.erase(temporaries.end() - numTemporaries, temporaries.end());
     }
 
     System &EmitterContext::getSystem() {
@@ -104,6 +113,27 @@ namespace pimii {
         return opcodes;
     }
 
+    Offset EmitterContext::nextOpCodePosition() {
+        return opcodes.size();
+    }
+
+    void EmitterContext::pushJump(uint8_t opcode, Offset delta) {
+        opcodes.emplace_back(opcode | (uint8_t) ((delta / 256) << 5));
+        opcodes.emplace_back((uint8_t) (delta % 256));
+    }
+
+    void EmitterContext::insertJump(Offset index, uint8_t opcode, Offset delta) {
+        opcodes[index] = opcode | (uint8_t) ((delta / 256) << 5);
+        opcodes[index + 1] = (uint8_t) (delta % 256);
+    }
+
+    Offset EmitterContext::pushJumpPlaceholder() {
+        Offset result = nextOpCodePosition();
+        pushSingle(0);
+        pushSingle(0);
+        return result;
+    }
+
     void Block::emitByteCodes(EmitterContext &ctx) {
         ctx.pushTemporaries(temporaries);
 
@@ -112,6 +142,16 @@ namespace pimii {
         }
 
         ctx.popTemporaries(temporaries.size());
+    }
+
+    void Block::emitInner(EmitterContext &context) {
+        context.pushTemporaries(temporaries);
+
+        for (auto &statement : statements) {
+            statement->emitByteCodes(context);
+        }
+
+        context.popTemporaries(temporaries.size());
     }
 
     void LiteralSymbol::emitByteCodes(EmitterContext &ctx) {
@@ -130,16 +170,16 @@ namespace pimii {
 
     void LiteralNumber::emitByteCodes(EmitterContext &ctx) {
         if (number == 0) {
-            ctx.pushSingle(Interpreter::OP_PUSH_ZERO);
+            ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_ZERO_INDEX);
             return;
         } else if (number == 1) {
-            ctx.pushSingle(Interpreter::OP_PUSH_ONE);
+            ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_ONE_INDEX);
             return;
         } else if (number == 2) {
-            ctx.pushSingle(Interpreter::OP_PUSH_TWO);
+            ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_TWO_INDEX);
             return;
         } else if (number == -1) {
-            ctx.pushSingle(Interpreter::OP_PUSH_MINUS_ONE);
+            ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_MINUS_ONE_INDEX);
             return;
         }
 
@@ -151,13 +191,17 @@ namespace pimii {
         int offset = ctx.findTemporaryIndex(name);
         if (offset < 0) {
             //TODO error
-            ctx.pushSingle(Interpreter::OP_PUSH_NIL);
+            ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_NIL_INDEX);
         } else {
             ctx.pushWithIndex(Interpreter::OP_PUSH_TEMPORARY, offset);
         }
     }
 
     void MethodCall::emitByteCodes(EmitterContext &ctx) {
+        if (emitOptimizedControlFlow(ctx)) {
+            return;
+        }
+
         receiver->emitByteCodes(ctx);
         for (auto &arg : arguments) {
             arg->emitByteCodes(ctx);
@@ -192,8 +236,25 @@ namespace pimii {
         }
     }
 
+    bool MethodCall::emitOptimizedControlFlow(EmitterContext &ctx) {
+        if (selector == "whileTrue:" && arguments.size() == 1 && receiver->type() == STMT_BLOCK &&
+            arguments[0]->type() == STMT_BLOCK) {
+            Offset loopAddress = ctx.nextOpCodePosition();
+            receiver->emitByteCodes(ctx);
+            Offset jumpOnFalseLocation = ctx.pushJumpPlaceholder();
+            reinterpret_cast<Block *>(arguments[0].get())->emitInner(ctx);
+            Offset delta = ctx.nextOpCodePosition() - loopAddress;
+
+            ctx.pushJump(Interpreter::OP_JUMP_BACK, delta + 2);
+            ctx.insertJump(jumpOnFalseLocation, Interpreter::OP_JUMP_ON_FALSE,
+                           ctx.nextOpCodePosition() - jumpOnFalseLocation - 2);
+            return true;
+        }
+        return false;
+    }
+
     void Return::emitByteCodes(EmitterContext &ctx) {
         expression->emitByteCodes(ctx);
-        ctx.pushSingle(Interpreter::OP_RETURN_STACK_TOP_TO_SENDER);
+        ctx.pushCompound(Interpreter::OP_RETURN, Interpreter::OP_RETURN_STACK_TOP_TO_SENDER_INDEX);
     }
 }

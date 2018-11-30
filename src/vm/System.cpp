@@ -4,6 +4,7 @@
 
 #include "System.h"
 #include "Nil.h"
+#include "Primitives.h"
 
 namespace pimii {
 
@@ -32,7 +33,7 @@ namespace pimii {
 
         // These special selectors will first call their assigned primitive (in Primitives.h) and only
         // send the selector if the primitive rejected execution.
-        specialSelectors->fields[0] = symbols.lookup("==");
+        specialSelectors->fields[Primitives::PRIMITIVE_EQUALITY] = symbols.lookup("==");
         specialSelectors->fields[1] = symbols.lookup("<");
         specialSelectors->fields[2] = symbols.lookup("<=");
         specialSelectors->fields[3] = symbols.lookup(">");
@@ -83,8 +84,6 @@ namespace pimii {
                 return obj.getObject()->type;
             case BYTES:
                 return obj.getBytes()->type;
-            case WORDS:
-                return obj.getWords()->type;
             case SMALL_INT:
                 return types.smallIntType;
         }

@@ -17,7 +17,7 @@ int main() {
 //    }
 //
     pimii::System sys;
-    pimii::Compiler compiler("ifTrue: aBlock otherwise: anotherBlock | a b c | a := 3. ^a + 4 - -2");
+    pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.", pimii::Nil::NIL);
     pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
 //

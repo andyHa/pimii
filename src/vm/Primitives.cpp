@@ -6,51 +6,6 @@
 
 namespace pimii {
 
-    const Offset Primitives::PRIMITIVE_EQUALITY = 0;
-    const Offset Primitives::PRIMITIVE_LESS_THAN = 1;
-    const Offset Primitives::PRIMITIVE_LESS_THAN_OR_EQUAL = 2;
-    const Offset Primitives::PRIMITIVE_GREATER_THAN = 3;
-    const Offset Primitives::PRIMITIVE_GREATER_THAN_OR_EQUAL = 4;
-
-    const Offset Primitives::PRIMITIVE_ADD = 5;
-    const Offset Primitives::PRIMITIVE_SUBTRACT = 6;
-    const Offset Primitives::PRIMITIVE_MULTIPLY = 7;
-    const Offset Primitives::PRIMITIVE_DIVIDE = 8;
-    const Offset Primitives::PRIMITIVE_REMAINDER = 9;
-
-    const Offset Primitives::PRIMITIVE_BASIC_NEW = 10;
-    const Offset Primitives::PRIMITIVE_BASIC_NEW_WITH = 11;
-    const Offset Primitives::PRIMITIVE_CLASS = 12;
-    const Offset Primitives::PRIMITIVE_BLOCK_COPY = 13;
-    const Offset Primitives::PRIMITIVE_VALUE_NO_ARG = 14;
-    const Offset Primitives::PRIMITIVE_VALUE_ONE_ARG = 15;
-    const Offset Primitives::PRIMITIVE_VALUE_TWO_ARGS = 16;
-    const Offset Primitives::PRIMITIVE_VALUE_THREE_ARGS = 17;
-    const Offset Primitives::PRIMITIVE_VALUE_N_ARGS = 18;
-    const Offset Primitives::PRIMITIVE_PERFORM_NO_ARG = 19;
-    const Offset Primitives::PRIMITIVE_PERFORM_ONE_ARG = 20;
-    const Offset Primitives::PRIMITIVE_PERFORM_TWO_ARGS = 21;
-    const Offset Primitives::PRIMITIVE_PERFORM_THREE_ARGS = 22;
-    const Offset Primitives::PRIMITIVE_PERFORM_N_ARGS = 23;
-
-    const Offset Primitives::PRIMITIVE_HASH = 24;
-    const Offset Primitives::PRIMITIVE_SIZE = 25;
-    const Offset Primitives::PRIMITIVE_AT = 26;
-    const Offset Primitives::PRIMITIVE_AT_PUT = 27;
-    const Offset Primitives::PRIMITIVE_AS_SYMBOL = 28;
-    const Offset Primitives::PRIMITIVE_AS_STRING = 29;
-
-    const std::array<Primitive, 30> Primitives::methods = {equality, lessThan, lessThanOrEqual, greaterThan,
-                                                           greaterThanOrEqual, add, subtract, multiply, divide,
-                                                           remainder, basicNew, basicNewWith, clazz, hash, size,
-                                                           blockCopy, value, value, value, value, valueWith, perform,
-                                                           perform, perform, perform, performWith, at, atPut, asSymbol,
-                                                           asString};
-
-    bool Primitives::executePrimitive(Offset index, Interpreter &interpreter, Offset argumentCount) {
-        return methods[index](interpreter, argumentCount);
-    }
-
     bool Primitives::equality(Interpreter &interpreter, Offset argumentCount) {
         if (argumentCount != 1) {
             return false;
@@ -224,9 +179,6 @@ namespace pimii {
             case OBJECT:
                 interpreter.push(ObjectPointer(self.getObject()->size -
                                                self.getObject()->type.getObject()->fields[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].getInt()));
-                return true;
-            case WORDS:
-                interpreter.push(ObjectPointer(self.getWords()->size));
                 return true;
             case BYTES:
                 interpreter.push(ObjectPointer(self.getBytes()->size * sizeof(Word) - self.getBytes()->odd));

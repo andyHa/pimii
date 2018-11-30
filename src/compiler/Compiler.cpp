@@ -103,19 +103,23 @@ namespace pimii {
             if (tokenizer.current().type == NAME) {
                 if (tokenizer.current().value == "self") {
                     tokenizer.consume();
-                    return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_RETURN_RECEIVER));
+                    return std::unique_ptr<Expression>(
+                            new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_RECEIVER_INDEX));
                 }
                 if (tokenizer.current().value == "true") {
                     tokenizer.consume();
-                    return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_RETURN_TRUE));
+                    return std::unique_ptr<Expression>(
+                            new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_TRUE_INDEX));
                 }
                 if (tokenizer.current().value == "false") {
                     tokenizer.consume();
-                    return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_RETURN_FALSE));
+                    return std::unique_ptr<Expression>(
+                            new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_FALSE_INDEX));
                 }
                 if (tokenizer.current().value == "nil") {
                     tokenizer.consume();
-                    return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_RETURN_NIL));
+                    return std::unique_ptr<Expression>(
+                            new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_NIL_INDEX));
                 }
             }
 
@@ -138,7 +142,7 @@ namespace pimii {
 
     std::unique_ptr<Expression> Compiler::expression() {
         std::unique_ptr<Expression> currentReceiver = atom();
-        while (tokenizer.current().type != EOI && tokenizer.current().type != FULLSTOP) {
+        while (true) {
             if (tokenizer.current().type == NAME) {
                 currentReceiver = unaryCall(std::move(currentReceiver));
             }
@@ -151,10 +155,9 @@ namespace pimii {
                 currentReceiver = selectorCall(std::move(currentReceiver));
             }
 
-            //TODO fail
+            return currentReceiver;
         }
 
-        return currentReceiver;
     }
 
     std::unique_ptr<Expression> Compiler::atom() {
@@ -206,19 +209,23 @@ namespace pimii {
     std::unique_ptr<Expression> Compiler::parseName() {
         if (tokenizer.current().value == "self") {
             tokenizer.consume();
-            return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_PUSH_RECEIVER));
+            return std::unique_ptr<Expression>(
+                    new BuiltinConstant(Interpreter::OP_PUSH, Interpreter::OP_PUSH_RECEIVER_INDEX));
         }
         if (tokenizer.current().value == "true") {
             tokenizer.consume();
-            return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_PUSH_TRUE));
+            return std::unique_ptr<Expression>(
+                    new BuiltinConstant(Interpreter::OP_PUSH, Interpreter::OP_PUSH_TRUE_INDEX));
         }
         if (tokenizer.current().value == "false") {
             tokenizer.consume();
-            return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_PUSH_FALSE));
+            return std::unique_ptr<Expression>(
+                    new BuiltinConstant(Interpreter::OP_PUSH, Interpreter::OP_PUSH_FALSE_INDEX));
         }
         if (tokenizer.current().value == "nil") {
             tokenizer.consume();
-            return std::unique_ptr<Expression>(new BuiltinConstant(Interpreter::OP_PUSH_NIL));
+            return std::unique_ptr<Expression>(
+                    new BuiltinConstant(Interpreter::OP_PUSH, Interpreter::OP_PUSH_NIL_INDEX));
         }
         if (isupper(tokenizer.current().value[0])) {
             return std::unique_ptr<Expression>(new PushGlobal(tokenizer.consume().value));
@@ -228,7 +235,40 @@ namespace pimii {
     }
 
     std::unique_ptr<Expression> Compiler::parseBlock() {
-        return std::unique_ptr<Expression>();
+        tokenizer.consume();
+        std::unique_ptr<Block> block = std::unique_ptr<Block>(new Block());
+        while (tokenizer.current().type == COLON) {
+            tokenizer.consume();
+            if (tokenizer.current().type == NAME) {
+                block->temporaries.emplace_back(tokenizer.consume().value);
+            } else {
+                //TODO
+            }
+        }
+
+        if (tokenizer.current().type == OPERATOR && tokenizer.current().value == "|") {
+            if (block->temporaries.empty()) {
+                //TODO
+            }
+            tokenizer.consume();
+        }
+
+        while (tokenizer.current().type != EOI && tokenizer.current().type != RA_BRACKET) {
+            block->statements.emplace_back(statement());
+            if (tokenizer.current().type == FULLSTOP) {
+                tokenizer.consume();
+            } else if (tokenizer.current().type != RA_BRACKET) {
+                errors.emplace_back(Error(tokenizer.currentLine(), "Expected a '.' at the end of a statement."));
+            }
+        }
+
+        if (tokenizer.current().type != RA_BRACKET) {
+            errors.emplace_back(Error(tokenizer.currentLine(), "Expected a ']' at the end of a block."));
+        } else {
+            tokenizer.consume();
+        }
+
+        return block;
     }
 
     std::unique_ptr<Expression> Compiler::unaryCall(std::unique_ptr<Expression> receiver) {
@@ -245,7 +285,13 @@ namespace pimii {
     }
 
     std::unique_ptr<Expression> Compiler::selectorCall(std::unique_ptr<Expression> receiver) {
-        return receiver;
+        auto call = new MethodCall();
+        call->receiver = std::move(receiver);
+        while(tokenizer.current().type == COLON_NAME) {
+            call->selector += tokenizer.consume().value;
+            call->arguments.emplace_back(expression());
+        }
+        return std::unique_ptr<Expression>(call);
     }
 
     std::unique_ptr<Expression> Compiler::continuation() {

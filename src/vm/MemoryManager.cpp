@@ -6,20 +6,7 @@
 
 namespace pimii {
 
-    Object *MemoryManager::allocObject(Offset numberOfFields, ObjectPointer type) {
-        auto result = (Object *) malloc(sizeof(Offset) + sizeof(ObjectPointer) * (numberOfFields + 1));
-        memset(result, 0, sizeof(Offset) + sizeof(ObjectPointer) * (numberOfFields + 1));
-        result->size = numberOfFields;
-        result->type = type;
-        return result;
-    }
 
-    WordBuffer *MemoryManager::allocWords(Offset numberOfWords, ObjectPointer type) {
-        auto result = (WordBuffer *) malloc(sizeof(Offset) + sizeof(ObjectPointer) + sizeof(Word) * numberOfWords);
-        result->size = numberOfWords;
-        result->type = type;
-        return result;
-    }
 
     ByteBuffer *MemoryManager::allocBytes(Offset numberOfBytes, ObjectPointer type) {
         Offset numberOfWords = numberOfBytes / sizeof(Word);

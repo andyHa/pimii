@@ -13,7 +13,6 @@ namespace pimii {
     typedef bool(*Primitive)(Interpreter &interpreter, Offset argumentCount);
 
     class Primitives {
-        static const std::array<Primitive, 30> methods;
 
         static bool equality(Interpreter &interpreter, Offset argumentCount);
 
@@ -63,45 +62,57 @@ namespace pimii {
 
         static bool asString(Interpreter &interpreter, Offset argumentCount);
 
+        static inline const std::array<Primitive, 30> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
+                                                                 greaterThanOrEqual, add, subtract, multiply, divide,
+                                                                 remainder, basicNew, basicNewWith, clazz, hash, size,
+                                                                 blockCopy, value, value, value, value, valueWith,
+                                                                 perform,
+                                                                 perform, perform, perform, performWith, at, atPut,
+                                                                 asSymbol,
+                                                                 asString};
+
+
     public:
-        // These are preferred primitives. This list matches the special selectors in Interpreter.cpp
+        // These are preferred primitives. This list matches the special selectors in System.cpp
         // and these primitives will be invoked in place of an actual method call.
-        static const Offset PRIMITIVE_EQUALITY;
-        static const Offset PRIMITIVE_LESS_THAN;
-        static const Offset PRIMITIVE_LESS_THAN_OR_EQUAL;
-        static const Offset PRIMITIVE_GREATER_THAN;
-        static const Offset PRIMITIVE_GREATER_THAN_OR_EQUAL;
+        static inline const Offset PRIMITIVE_EQUALITY = 0;
+        static inline const Offset PRIMITIVE_LESS_THAN = 1;
+        static inline const Offset PRIMITIVE_LESS_THAN_OR_EQUAL = 2;
+        static inline const Offset PRIMITIVE_GREATER_THAN = 3;
+        static inline const Offset PRIMITIVE_GREATER_THAN_OR_EQUAL = 4;
 
-        static const Offset PRIMITIVE_ADD;
-        static const Offset PRIMITIVE_SUBTRACT;
-        static const Offset PRIMITIVE_MULTIPLY;
-        static const Offset PRIMITIVE_DIVIDE;
-        static const Offset PRIMITIVE_REMAINDER;
+        static inline const Offset PRIMITIVE_ADD = 5;
+        static inline const Offset PRIMITIVE_SUBTRACT = 6;
+        static inline const Offset PRIMITIVE_MULTIPLY = 7;
+        static inline const Offset PRIMITIVE_DIVIDE = 8;
+        static inline const Offset PRIMITIVE_REMAINDER = 9;
 
-        static const Offset PRIMITIVE_BASIC_NEW;
-        static const Offset PRIMITIVE_BASIC_NEW_WITH;
-        static const Offset PRIMITIVE_CLASS;
-        static const Offset PRIMITIVE_BLOCK_COPY;
-        static const Offset PRIMITIVE_VALUE_NO_ARG;
-        static const Offset PRIMITIVE_VALUE_ONE_ARG;
-        static const Offset PRIMITIVE_VALUE_TWO_ARGS;
-        static const Offset PRIMITIVE_VALUE_THREE_ARGS;
-        static const Offset PRIMITIVE_VALUE_N_ARGS;
-        static const Offset PRIMITIVE_PERFORM_NO_ARG;
-        static const Offset PRIMITIVE_PERFORM_ONE_ARG;
-        static const Offset PRIMITIVE_PERFORM_TWO_ARGS;
-        static const Offset PRIMITIVE_PERFORM_THREE_ARGS;
-        static const Offset PRIMITIVE_PERFORM_N_ARGS;
+        static inline const Offset PRIMITIVE_BASIC_NEW = 10;
+        static inline const Offset PRIMITIVE_BASIC_NEW_WITH = 11;
+        static inline const Offset PRIMITIVE_CLASS = 12;
+        static inline const Offset PRIMITIVE_BLOCK_COPY = 13;
+        static inline const Offset PRIMITIVE_VALUE_NO_ARG = 14;
+        static inline const Offset PRIMITIVE_VALUE_ONE_ARG = 15;
+        static inline const Offset PRIMITIVE_VALUE_TWO_ARGS = 16;
+        static inline const Offset PRIMITIVE_VALUE_THREE_ARGS = 17;
+        static inline const Offset PRIMITIVE_VALUE_N_ARGS = 18;
+        static inline const Offset PRIMITIVE_PERFORM_NO_ARG = 19;
+        static inline const Offset PRIMITIVE_PERFORM_ONE_ARG = 20;
+        static inline const Offset PRIMITIVE_PERFORM_TWO_ARGS = 21;
+        static inline const Offset PRIMITIVE_PERFORM_THREE_ARGS = 22;
+        static inline const Offset PRIMITIVE_PERFORM_N_ARGS = 23;
 
         // These primitives can be invoked via methods but also be overwritten by classes.
-        static const Offset PRIMITIVE_HASH;
-        static const Offset PRIMITIVE_SIZE;
-        static const Offset PRIMITIVE_AT;
-        static const Offset PRIMITIVE_AT_PUT;
-        static const Offset PRIMITIVE_AS_SYMBOL;
-        static const Offset PRIMITIVE_AS_STRING;
+        static inline const Offset PRIMITIVE_HASH = 24;
+        static inline const Offset PRIMITIVE_SIZE = 25;
+        static inline const Offset PRIMITIVE_AT = 26;
+        static inline const Offset PRIMITIVE_AT_PUT = 27;
+        static inline const Offset PRIMITIVE_AS_SYMBOL = 28;
+        static inline const Offset PRIMITIVE_AS_STRING = 29;
 
-        static bool executePrimitive(Offset index, Interpreter &interpreter, Offset argumentCount);
+        static inline bool executePrimitive(Offset index, Interpreter &interpreter, Offset argumentCount) {
+            return methods[index](interpreter, argumentCount);
+        }
     };
 
 }

@@ -89,7 +89,7 @@ namespace pimii {
         method->fields[Interpreter::COMPILED_METHOD_FIELD_HEADER] = ObjectPointer(
                 (numberOfTemporaries << 2) | CompiledMethodType::BYTECODES);
         method->fields[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = ObjectPointer(bytes);
-        uint8_t *dest = bytes->bytes;
+        char *dest = bytes->bytes;
         for (auto b : byteCodes) {
             *dest = b;
             dest++;

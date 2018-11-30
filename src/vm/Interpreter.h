@@ -46,36 +46,43 @@ namespace pimii {
         static const Offset CONTEXT_HOME_FIELD;
         static const Offset CONTEXT_RECEIVER_FIELD;
 
-        static const uint8_t OP_RETURN_RECEIVER;
-        static const uint8_t OP_RETURN_TRUE;
-        static const uint8_t OP_RETURN_FALSE;
-        static const uint8_t OP_RETURN_NIL;
-        static const uint8_t OP_RETURN_STACK_TOP_TO_SENDER;
-        static const uint8_t OP_RETURN_STACK_TO_TO_CALLER;
-        static const uint8_t OP_PUSH_LITERAL_CONSTANT;
-        static const uint8_t OP_PUSH_LITERAL_VARIABLE;
-        static const uint8_t OP_PUSH_TEMPORARY;
-        static const uint8_t OP_PUSH_RECEIVER_FIELD;
-        static const uint8_t OP_PUSH_RECEIVER;
-        static const uint8_t OP_PUSH_TRUE;
-        static const uint8_t OP_PUSH_FALSE;
-        static const uint8_t OP_PUSH_NIL;
-        static const uint8_t OP_PUSH_MINUS_ONE;
-        static const uint8_t OP_PUSH_ZERO;
-        static const uint8_t OP_PUSH_ONE;
-        static const uint8_t OP_PUSH_TWO;
-        static const uint8_t OP_POP_AND_STORE_RECEIVER_FIELD;
-        static const uint8_t OP_POP_AND_STORE_IN_TEMPORARY;
-        static const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS;
-        static const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_ONE_ARG;
-        static const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_TWO_ARGS;
-        static const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_N_ARGS;
-        static const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_NO_ARGS;
-        static const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_ONE_ARG;
-        static const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS;
-        static const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS;
+        static inline const uint8_t OP_RETURN = 0;
+        static inline const uint8_t OP_RETURN_RECEIVER_INDEX = 0;
+        static inline const uint8_t OP_RETURN_TRUE_INDEX = 1;
+        static inline const uint8_t OP_RETURN_FALSE_INDEX = 2;
+        static inline const uint8_t OP_RETURN_NIL_INDEX = 3;
+        static inline const uint8_t OP_RETURN_STACK_TOP_TO_SENDER_INDEX = 4;
+        static inline const uint8_t OP_RETURN_STACK_TO_TO_CALLER_INDEX = 5;
+        static inline const uint8_t OP_PUSH_LITERAL_CONSTANT = 2;
+        static inline const uint8_t OP_PUSH_LITERAL_VARIABLE = 3;
+        static inline const uint8_t OP_PUSH_TEMPORARY = 4;
+        static inline const uint8_t OP_PUSH_RECEIVER_FIELD = 5;
+        static inline const uint8_t OP_PUSH = 6;
+        static inline const uint8_t OP_PUSH_RECEIVER_INDEX = 0;
+        static inline const uint8_t OP_PUSH_TRUE_INDEX = 1;
+        static inline const uint8_t OP_PUSH_FALSE_INDEX = 2;
+        static inline const uint8_t OP_PUSH_NIL_INDEX = 3;
+        static inline const uint8_t OP_PUSH_MINUS_ONE_INDEX = 4;
+        static inline const uint8_t OP_PUSH_ZERO_INDEX = 5;
+        static inline const uint8_t OP_PUSH_ONE_INDEX = 6;
+        static inline const uint8_t OP_PUSH_TWO_INDEX = 7;
+        static inline const uint8_t OP_POP_AND_STORE_RECEIVER_FIELD = 7;
+        static inline const uint8_t OP_POP_AND_STORE_IN_TEMPORARY = 8;
+        static inline const uint8_t OP_POP_AND_STORE_IN_LITERAL_VARIABLE = 9;
+        static inline const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS = 10;
+        static inline const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_ONE_ARG = 11;
+        static inline const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_TWO_ARGS = 12;
+        static inline const uint8_t OP_SEND_LITERAL_SELECTOR_WITH_N_ARGS = 13;
+        static inline const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_NO_ARGS = 14;
+        static inline const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_ONE_ARG = 15;
+        static inline const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS = 16;
+        static inline const uint8_t OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS = 17;
+        static inline const uint8_t OP_JUMP_ON_TRUE = 18;
+        static inline const uint8_t OP_JUMP_ON_FALSE = 19;
+        static inline const uint8_t OP_JUMP_ALWAYS = 20;
+        static inline const uint8_t OP_JUMP_BACK = 21;
 
-        static const uint8_t LAST_PREFERRED_PRIMITIVE_SELECTOR = 23;
+        static inline const uint8_t LAST_PREFERRED_PRIMITIVE_SELECTOR = 23;
 
         explicit Interpreter(System &system);
 
@@ -139,6 +146,7 @@ namespace pimii {
 
         bool executePrimitive(Offset index, Offset numberOfArguments);
 
+        void handleJump(uint8_t code, uint8_t index);
     };
 
 }

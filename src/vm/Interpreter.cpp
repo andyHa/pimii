@@ -27,35 +27,6 @@ namespace pimii {
     const Offset Interpreter::COMPILED_METHOD_FIELD_LITERALS_START = 2;
     const Offset Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = 6;
 
-    const uint8_t Interpreter::OP_RETURN_RECEIVER = 0;
-    const uint8_t Interpreter::OP_RETURN_TRUE = 1;
-    const uint8_t Interpreter::OP_RETURN_FALSE = 2;
-    const uint8_t Interpreter::OP_RETURN_NIL = 3;
-    const uint8_t Interpreter::OP_RETURN_STACK_TOP_TO_SENDER = 4;
-    const uint8_t Interpreter::OP_RETURN_STACK_TO_TO_CALLER = 5;
-    const uint8_t Interpreter::OP_PUSH_LITERAL_CONSTANT = 6;
-    const uint8_t Interpreter::OP_PUSH_LITERAL_VARIABLE = 7;
-    const uint8_t Interpreter::OP_PUSH_TEMPORARY = 8;
-    const uint8_t Interpreter::OP_PUSH_RECEIVER_FIELD = 9;
-    const uint8_t Interpreter::OP_PUSH_RECEIVER = 10;
-    const uint8_t Interpreter::OP_PUSH_TRUE = 11;
-    const uint8_t Interpreter::OP_PUSH_FALSE = 12;
-    const uint8_t Interpreter::OP_PUSH_NIL = 13;
-    const uint8_t Interpreter::OP_PUSH_MINUS_ONE = 14;
-    const uint8_t Interpreter::OP_PUSH_ZERO = 15;
-    const uint8_t Interpreter::OP_PUSH_ONE = 16;
-    const uint8_t Interpreter::OP_PUSH_TWO = 17;
-    const uint8_t Interpreter::OP_POP_AND_STORE_RECEIVER_FIELD = 18;
-    const uint8_t Interpreter::OP_POP_AND_STORE_IN_TEMPORARY = 19;
-    const uint8_t Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS = 20;
-    const uint8_t Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_ONE_ARG = 21;
-    const uint8_t Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_TWO_ARGS = 22;
-    const uint8_t Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_N_ARGS = 23;
-    const uint8_t Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_NO_ARGS = 24;
-    const uint8_t Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_ONE_ARG = 25;
-    const uint8_t Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS = 26;
-    const uint8_t Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS = 27;
-
 
     Interpreter::Interpreter(System &system) : system(system) {
         // Install by emulating: "CompiledMethod class specialSelectors: <array>"
@@ -71,52 +42,69 @@ namespace pimii {
 
     void Interpreter::dispatchOpCode(uint8_t opCode) {
         uint8_t code = opCode & (uint8_t) 0b11111;
+        uint8_t index = opCode >> 5;
+
         switch (code) {
-            case OP_RETURN_RECEIVER:
-                returnValueTo(receiver, sender());
+            case OP_RETURN:
+                switch (index) {
+                    case OP_RETURN_RECEIVER_INDEX:
+                        returnValueTo(receiver, sender());
+                        return;
+                    case OP_RETURN_TRUE_INDEX:
+                        returnValueTo(system.trueValue, sender());
+                        return;
+                    case OP_RETURN_FALSE_INDEX:
+                        returnValueTo(system.falseValue, sender());
+                        return;
+                    case OP_RETURN_NIL_INDEX:
+                        returnValueTo(Nil::NIL, sender());
+                        return;
+                    case OP_RETURN_STACK_TOP_TO_SENDER_INDEX:
+                        returnValueTo(pop(), sender());
+                        return;
+                    case OP_RETURN_STACK_TO_TO_CALLER_INDEX:
+                        returnValueTo(pop(), caller());
+                        return;
+                }
+                //TODO
                 return;
-            case OP_RETURN_TRUE:
-                returnValueTo(system.trueValue, sender());
+            case OP_PUSH:
+                switch (index) {
+                    case OP_PUSH_RECEIVER_INDEX:
+                        push(receiver);
+                        return;
+                    case OP_PUSH_TRUE_INDEX:
+                        push(system.trueValue);
+                        return;
+                    case OP_PUSH_FALSE_INDEX:
+                        push(system.falseValue);
+                        return;
+                    case OP_PUSH_NIL_INDEX:
+                        push(Nil::NIL);
+                        return;
+                    case OP_PUSH_MINUS_ONE_INDEX:
+                        push(ObjectPointer(-1));
+                        return;
+                    case OP_PUSH_ZERO_INDEX:
+                        push(ObjectPointer(0));
+                        return;
+                    case OP_PUSH_ONE_INDEX:
+                        push(ObjectPointer(1));
+                        return;
+                    case OP_PUSH_TWO_INDEX:
+                        push(ObjectPointer(2));
+                        return;
+                }
+                //TODO
                 return;
-            case OP_RETURN_FALSE:
-                returnValueTo(system.falseValue, sender());
-                return;
-            case OP_RETURN_NIL:
-                returnValueTo(Nil::NIL, sender());
-                return;
-            case OP_RETURN_STACK_TOP_TO_SENDER:
-                returnValueTo(pop(), sender());
-                return;
-            case OP_RETURN_STACK_TO_TO_CALLER:
-                returnValueTo(pop(), caller());
-                return;
-            case OP_PUSH_RECEIVER:
-                push(receiver);
-                return;
-            case OP_PUSH_TRUE:
-                push(system.trueValue);
-                return;
-            case OP_PUSH_FALSE:
-                push(system.falseValue);
-                return;
-            case OP_PUSH_NIL:
-                push(Nil::NIL);
-                return;
-            case OP_PUSH_MINUS_ONE:
-                push(ObjectPointer(-1));
-                return;
-            case OP_PUSH_ZERO:
-                push(ObjectPointer(0));
-                return;
-            case OP_PUSH_ONE:
-                push(ObjectPointer(1));
-                return;
-            case OP_PUSH_TWO:
-                push(ObjectPointer(2));
+            case OP_JUMP_BACK:
+            case OP_JUMP_ALWAYS:
+            case OP_JUMP_ON_TRUE:
+            case OP_JUMP_ON_FALSE:
+                handleJump(opCode, index);
                 return;
         }
 
-        uint8_t index = opCode >> 5;
         if (index == 0b111) {
             index = fetchInstruction();
         }
@@ -139,6 +127,9 @@ namespace pimii {
                 return;
             case OP_POP_AND_STORE_IN_TEMPORARY:
                 temporary(index, pop());
+                return;
+            case OP_POP_AND_STORE_IN_LITERAL_VARIABLE:
+                literal(index).getObject()->fields[SystemDictionary::ASSOCIATION_FIELD_VALUE] = pop();
                 return;
             case OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS:
                 send(literal(index), 0);
@@ -212,9 +203,9 @@ namespace pimii {
 
     uint8_t Interpreter::fetchInstruction() {
         if (instructionPointer >= maxIP) {
-            return OP_RETURN_NIL;
+            return OP_RETURN;
         }
-        return opCodes->bytes[instructionPointer++];
+        return (uint8_t) opCodes->bytes[instructionPointer++];
     }
 
     void Interpreter::push(ObjectPointer value) {
@@ -405,6 +396,33 @@ namespace pimii {
 
     Offset Interpreter::getStackBasePointer() {
         return CONTEXT_FIXED_SIZE + temporaryCount;
+    }
+
+    void Interpreter::handleJump(uint8_t code, uint8_t index) {
+        int delta = index * 255 + fetchInstruction();
+
+        switch (code) {
+            case OP_JUMP_BACK:
+                if (delta > instructionPointer) {
+                    instructionPointer = 0;
+                } else {
+                    instructionPointer = instructionPointer - delta;
+                }
+                return;
+            case OP_JUMP_ALWAYS:
+                instructionPointer = instructionPointer + delta;
+                return;
+            case OP_JUMP_ON_TRUE:
+                if (pop() == system.trueValue) {
+                    instructionPointer = instructionPointer + delta;
+                }
+                return;
+            case OP_JUMP_ON_FALSE:
+                if (pop() == system.falseValue) {
+                    instructionPointer = instructionPointer + delta;
+                }
+                return;
+        }
     }
 
 

@@ -24,7 +24,6 @@ namespace pimii {
     };
 
     struct Object;
-    struct WordBuffer;
     struct ByteBuffer;
 
     class ObjectPointer {
@@ -32,8 +31,8 @@ namespace pimii {
 
     public:
 
-        static const inline Word  MASK = 0b11;
-        static const inline Word UNMASK= ~(Word) 0b11;
+        static const inline Word MASK = 0b11;
+        static const inline Word UNMASK = ~(Word) 0b11;
 
         inline ObjectPointer() noexcept : data(0) {};
 
@@ -41,8 +40,6 @@ namespace pimii {
                 ((Word) (intValue) << 2) | ObjectPointerType::SMALL_INT) {};
 
         explicit inline ObjectPointer(const Object *object) noexcept : data((Word) object) {};
-
-        explicit inline ObjectPointer(WordBuffer *buffer) noexcept : data((Word) buffer | ObjectPointerType::WORDS) {};
 
         explicit inline ObjectPointer(ByteBuffer *buffer) noexcept : data((Word) buffer | ObjectPointerType::BYTES) {};
 
@@ -70,16 +67,6 @@ namespace pimii {
             return (Object *) (data & UNMASK);
         }
 
-        inline WordBuffer *getWords() const {
-#ifdef PIMII_ENABLE_CHECKS
-            if (getObjectPointerType() != WORDS) {
-                throw std::bad_cast();
-            }
-#endif
-
-            return (WordBuffer *) (data & UNMASK);
-        }
-
         inline ByteBuffer *getBytes() const {
 #ifdef PIMII_ENABLE_CHECKS
             if (getObjectPointerType() != BYTES) {
@@ -103,7 +90,7 @@ namespace pimii {
             return data != rhs.data;
         }
 
-        inline Offset hash() const noexcept{
+        inline Offset hash() const noexcept {
             return (Offset) data;
         }
 
@@ -111,6 +98,7 @@ namespace pimii {
 
 
     struct Object {
+        Offset gcFlags;
         Offset size;
         ObjectPointer type;
         ObjectPointer fields[];
@@ -118,17 +106,15 @@ namespace pimii {
         Object(const Object &other) = delete;
     };
 
-    struct WordBuffer {
-        Offset size;
-        ObjectPointer type;
-        Word words[];
-    };
-
     struct ByteBuffer {
+        Offset gcFlags;
         Offset size;
         ObjectPointer type;
         Offset odd;
-        uint8_t bytes[];
+        union {
+            char bytes[];
+            char32_t chars[];
+        };
     };
 
 

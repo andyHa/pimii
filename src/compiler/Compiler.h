@@ -13,7 +13,7 @@ namespace pimii {
 
     class Compiler {
         std::string input;
-        std::vector<std::string> arguments;
+        ObjectPointer type;
         std::vector<Error> errors;
         Tokenizer tokenizer;
         std::string selector;
@@ -37,7 +37,7 @@ namespace pimii {
         std::unique_ptr<Expression> continuation();
 
     public:
-        explicit Compiler(std::string source) : input(std::move(source)), errors(), tokenizer(input, errors) {}
+        explicit Compiler(std::string source, ObjectPointer type) : input(std::move(source)), errors(), tokenizer(input, errors) {}
 
         ObjectPointer compile(System &system);
 

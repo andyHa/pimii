@@ -21,13 +21,14 @@ namespace pimii {
         void completeType(ObjectPointer type, ObjectPointer superType, const std::string& name);
 
     public:
-        static const Offset TYPE_FIELD_SUPERTYPE;
-        static const Offset TYPE_FIELD_NAME;
-        static const Offset TYPE_FIELD_NUMBER_OF_FIXED_FIELDS;
-        static const Offset TYPE_FIELD_TALLY;
-        static const Offset TYPE_FIELD_SELECTORS;
-        static const Offset TYPE_FIELD_METHODS;
-        static const Offset TYPE_SIZE;
+        static inline const Offset TYPE_FIELD_SUPERTYPE = 0;
+        static inline const Offset TYPE_FIELD_NAME = 1;
+        static inline const Offset TYPE_FIELD_NUMBER_OF_FIXED_FIELDS = 2;
+        static inline const Offset TYPE_FIELD_FIELD_NAMES = 3;
+        static inline const Offset TYPE_FIELD_TALLY = 4;
+        static inline const Offset TYPE_FIELD_SELECTORS =5;
+        static inline const Offset TYPE_FIELD_METHODS =6;
+        static inline const Offset TYPE_SIZE = 7;
 
         TypeSystem(MemoryManager &mm, SymbolTable &symbols, SystemDictionary &systemDictionary);
 

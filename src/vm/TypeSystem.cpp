@@ -7,32 +7,24 @@
 
 namespace pimii {
 
-    const Offset TypeSystem::TYPE_FIELD_SUPERTYPE = 0;
-    const Offset TypeSystem::TYPE_FIELD_NAME = 1;
-    const Offset TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS = 2;
-    const Offset TypeSystem::TYPE_FIELD_TALLY = 3;
-    const Offset TypeSystem::TYPE_FIELD_SELECTORS = 4;
-    const Offset TypeSystem::TYPE_FIELD_METHODS = 5;
-    const Offset TypeSystem::TYPE_SIZE = 6;
-
     TypeSystem::TypeSystem(MemoryManager &mm, SymbolTable &symbols, SystemDictionary &systemDictionary) :
             mm(mm), symbols(symbols), systemDictionary(systemDictionary),
-            nilType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            metaClassType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            classType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            objectType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            smallIntType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            symbolType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            stringType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            associationType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            arrayType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            byteArrayType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            methodContextType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            blockContextType(mm.allocObject(TYPE_SIZE,Nil::NIL)),
-            compiledMethodType(mm.allocObject(TYPE_SIZE + 1,Nil::NIL)) {
+            nilType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            metaClassType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            classType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            objectType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            smallIntType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            symbolType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            stringType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            associationType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            arrayType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            byteArrayType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            methodContextType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            blockContextType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
+            compiledMethodType(mm.allocObject(TYPE_SIZE + 1, Nil::NIL)) {
 
         // Create "MetaClass class"
-        ObjectPointer metaClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE,Nil::NIL));
+        auto metaClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE, Nil::NIL));
         metaClassClassType.getObject()->fields[TYPE_FIELD_NAME] = symbols.lookup("MetaClass class");
 
         // Create "MetaClass"
@@ -44,7 +36,7 @@ namespace pimii {
         metaClassClassType.getObject()->type = metaClassType;
 
         // Create "Object class"
-        ObjectPointer objectClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE, metaClassType));
+        auto objectClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE, metaClassType));
         objectClassClassType.getObject()->fields[TYPE_FIELD_NAME] = symbols.lookup("Object class");
 
         // Create "Object"
@@ -53,7 +45,7 @@ namespace pimii {
         systemDictionary.atPut(objectType.getObject()->fields[TYPE_FIELD_NAME], objectType);
 
         // Create "Behaviour"
-        ObjectPointer behaviourType = makeType(objectType, "Behaviour",0);
+        auto behaviourType = makeType(objectType, "Behaviour", 0);
 
         // Make "Behaviour" the superclass of "MetaClass"
         metaClassType.getObject()->fields[TYPE_FIELD_SUPERTYPE] = behaviourType;
@@ -69,7 +61,7 @@ namespace pimii {
         completeType(nilType, objectType, "Nil");
 
         // Create "Number" and "SmallInt"
-        ObjectPointer numberType = makeType(objectType, "Number",0);
+        auto numberType = makeType(objectType, "Number", 0);
         completeType(smallIntType, numberType, "SmallInteger");
 
         // Create "Symbol"
@@ -85,12 +77,12 @@ namespace pimii {
         completeType(compiledMethodType, objectType, "CompiledMethod");
 
         // Create "MethodContext" and "BlockContext"
-        ObjectPointer contextType = makeType(objectType, "Context",0);
+        auto contextType = makeType(objectType, "Context", 0);
         completeType(blockContextType, contextType, "BlockContext");
         completeType(methodContextType, contextType, "MethodContext");
 
         // Create "Array"
-        ObjectPointer collectionType = makeType(objectType, "Collection",0);
+        auto collectionType = makeType(objectType, "Collection", 0);
         completeType(arrayType, collectionType, "Array");
         completeType(byteArrayType, collectionType, "ByteArray");
     }
