@@ -264,10 +264,12 @@ namespace pimii {
 
     ObjectPointer Interpreter::temporary(Offset index) {
         //TODO limits
+        std::cout << "Read Temporary: " << index << system.info(homeContext->fields[CONTEXT_FIXED_SIZE + index]) << std::endl;
         return homeContext->fields[CONTEXT_FIXED_SIZE + index];
     }
 
     void Interpreter::temporary(Offset index, ObjectPointer value) {
+        std::cout << "Write Temporary: " << index << system.info(value) << std::endl;
         homeContext->fields[CONTEXT_FIXED_SIZE + index] = value;
     }
 

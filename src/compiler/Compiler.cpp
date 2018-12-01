@@ -32,6 +32,8 @@ namespace pimii {
             }
         }
 
+        context.pushCompound(Interpreter::OP_RETURN, Interpreter::OP_RETURN_STACK_TOP_TO_SENDER_INDEX);
+
         Methods methods(system.getMemoryManager(), system.getTypeSystem());
         return methods.createMethod(context.getMaxTemporaries(), context.getLiterals(), context.getOpCodes());
     }
@@ -292,7 +294,7 @@ namespace pimii {
     std::unique_ptr<Expression> Compiler::selectorCall(std::unique_ptr<Expression> receiver) {
         auto call = new MethodCall();
         call->receiver = std::move(receiver);
-        while(tokenizer.current().type == COLON_NAME) {
+        while (tokenizer.current().type == COLON_NAME) {
             call->selector += tokenizer.consume().value;
             call->arguments.emplace_back(expression(false));
         }

@@ -2,6 +2,7 @@
 // Created by Andreas Haufler on 25.11.18.
 //
 
+#include <iostream>
 #include "SymbolTable.h"
 #include "Strings.h"
 #include "Nil.h"
@@ -24,13 +25,13 @@ namespace pimii {
 
         Offset index = hash % table->size;
         for (Offset i = index; i < table->size; i++) {
-            ObjectPointer result = tryInsert(index, table, name);
+            ObjectPointer result = tryInsert(i, table, name);
             if (result != Nil::NIL) {
                 return result;
             }
         }
         for (Offset i = 0; i < index; i++) {
-            ObjectPointer result = tryInsert(index, table, name);
+            ObjectPointer result = tryInsert(i, table, name);
             if (result != Nil::NIL) {
                 return result;
             }

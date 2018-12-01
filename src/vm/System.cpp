@@ -117,7 +117,9 @@ namespace pimii {
 
     int System::getSpecialSelectorIndex(const std::string &name) {
         ObjectPointer symbol = symbols.lookup(name);
-        for (Offset index = 0; index <= NUMBER_OF_SPECIAL_SELECTORS; index++) {
+        debug(symbol);
+        for (Offset index = 0; index < NUMBER_OF_SPECIAL_SELECTORS; index++) {
+            debug(specialSelectors->fields[index]);
             if (symbol == specialSelectors->fields[index]) {
                 return index;
             }

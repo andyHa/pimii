@@ -2,6 +2,7 @@
 // Created by Andreas Haufler on 25.11.18.
 //
 
+#include <iostream>
 #include "Strings.h"
 
 namespace pimii {
@@ -13,6 +14,7 @@ namespace pimii {
 
         for (Offset i = 0; i < length; i++) {
             if (buffer->bytes[i] != other[i]) {
+                std::cout << buffer->bytes << " != " << string << std::endl;
                 return false;
             }
 
@@ -21,6 +23,7 @@ namespace pimii {
             }
         }
 
+        std::cout << buffer->bytes << " != " << string << std::endl;
         return false;
     }
 
@@ -40,8 +43,8 @@ namespace pimii {
 
     ObjectPointer Strings::make(MemoryManager &mm, ObjectPointer type, std::string string) {
         ByteBuffer *buffer = mm.allocBytes((Offset) string.size() + 1, type);
-        strcpy((char *) buffer->bytes, string.c_str());
-
+        std::memcpy(buffer->bytes, string.data(), string.size());
+        buffer->bytes[string.size()] ='\0';
         return ObjectPointer(buffer);
     }
 

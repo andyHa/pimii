@@ -97,7 +97,7 @@ namespace pimii {
 
 
     struct Object {
-        Offset size;
+        Word size;
         ObjectPointer type;
         ObjectPointer fields[];
 
@@ -105,9 +105,9 @@ namespace pimii {
     };
 
     struct ByteBuffer {
-        Offset size;
+        Word size;
         ObjectPointer type;
-        Offset odd;
+        Word odd;
             char bytes[];
     };
 

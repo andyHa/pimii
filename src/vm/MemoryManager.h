@@ -69,8 +69,9 @@ namespace pimii {
 //            result->type = type;
 
 
-            auto result = (Object *) malloc(sizeof(Offset) + sizeof(ObjectPointer) * (numberOfFields + 1));
-            memset(result, 0, sizeof(Offset) + sizeof(ObjectPointer) * (numberOfFields + 1));
+            auto data = malloc(sizeof(Word) + sizeof(ObjectPointer) * (numberOfFields + 1));
+            memset(data, 0, sizeof(Word) + sizeof(ObjectPointer) * (numberOfFields + 1));
+            auto result = (Object *) data;
             result->size = numberOfFields;
             result->type = type;
             return result;

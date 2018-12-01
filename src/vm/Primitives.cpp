@@ -73,6 +73,7 @@ namespace pimii {
     }
 
     bool Primitives::add(Interpreter &interpreter, Offset argumentCount) {
+        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
         if (argumentCount != 1 || interpreter.stackTop().getObjectPointerType() != SMALL_INT ||
             interpreter.stackValue(1).getObjectPointerType() != SMALL_INT) {
             return false;
