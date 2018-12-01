@@ -14,14 +14,17 @@ namespace pimii {
     class SymbolTable {
         MemoryManager &mm;
         ObjectPointer symbolType;
-        Object* symbolTable;
+        ObjectPointer symbolTable;
         static const Offset FIELD_TALLY;
         static const Offset FIELD_TABLE;
         static const Offset SIZE;
 
-        ObjectPointer tryInsert(Offset index, Object *table, const std::string &name);
-        void grow(Object *table);
-        void reInsert(Object *table, ObjectPointer symbol);
+        ObjectPointer tryInsert(Offset index, ObjectPointer table, const std::string &name);
+
+        void grow(ObjectPointer table);
+
+        void reInsert(ObjectPointer table, ObjectPointer symbol);
+
     public:
         SymbolTable(MemoryManager &mm);
 
@@ -29,8 +32,6 @@ namespace pimii {
 
         void installTypes(ObjectPointer symbolTableType, ObjectPointer arrayType, ObjectPointer symbolType);
 
-
-        ObjectPointer lookupString(ObjectPointer stringObject);
     };
 }
 

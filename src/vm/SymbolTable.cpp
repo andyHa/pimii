@@ -15,16 +15,16 @@ namespace pimii {
 
     SymbolTable::SymbolTable(MemoryManager &mm) : mm(mm), symbolType(Nil::NIL), symbolTable(
             mm.allocObject(SIZE, Nil::NIL)) {
-        symbolTable->fields[FIELD_TALLY] = ObjectPointer(0);
-        symbolTable->fields[FIELD_TABLE] = ObjectPointer(mm.allocObject(512, Nil::NIL));
+        symbolTable[FIELD_TALLY] = 0;
+        symbolTable[FIELD_TABLE] = ObjectPointer(mm.allocObject(512, Nil::NIL));
     }
 
     ObjectPointer SymbolTable::lookup(const std::string &name) {
         Offset hash = Strings::hash(name.c_str());
-        Object *table = symbolTable->fields[FIELD_TABLE].getObject();
+        ObjectPointer table = symbolTable[FIELD_TABLE];
 
-        Offset index = hash % table->size;
-        for (Offset i = index; i < table->size; i++) {
+        Offset index = hash % table.size();
+        for (Offset i = index; i < table.size(); i++) {
             ObjectPointer result = tryInsert(i, table, name);
             if (result != Nil::NIL) {
                 return result;
@@ -41,16 +41,16 @@ namespace pimii {
         return Nil::NIL;
     }
 
-    ObjectPointer SymbolTable::tryInsert(Offset index, Object *table, const std::string &name) {
-        if (table->fields[index] == Nil::NIL) {
-            table->fields[index] = Strings::make(mm, symbolType, name);
-            SmallInteger newSize = symbolTable->fields[FIELD_TALLY].getInt() + 1;
-            symbolTable->fields[FIELD_TALLY] = ObjectPointer(newSize);
-            if (newSize > table->size * 0.75) {
+    ObjectPointer SymbolTable::tryInsert(Offset index, ObjectPointer table, const std::string &name) {
+        if (table[index] == Nil::NIL) {
+            table[index] = Strings::make(mm, symbolType, name);
+            SmallInteger newSize = symbolTable[FIELD_TALLY].smallInt() + 1;
+            symbolTable[FIELD_TALLY] = newSize;
+            if (newSize > table.size() * 0.75) {
                 grow(table);
             }
-            return table->fields[index];
-        } else if (Strings::areEqual(table->fields[index], name)) {
+            return table[index];
+        } else if (table[index].cStrings::areEqual(table->fields[index], name)) {
             return table->fields[index];
         }
         return Nil::NIL;
