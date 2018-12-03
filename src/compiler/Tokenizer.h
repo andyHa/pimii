@@ -5,6 +5,7 @@
 #ifndef MEM_TOKENIZER_H
 #define MEM_TOKENIZER_H
 
+#include <vector>
 #include <deque>
 #include "../vm/ObjectPointer.h"
 
@@ -16,13 +17,13 @@ namespace pimii {
     public:
         explicit BufferedReader(std::string_view input) : input(input), pos(0) {};
 
-        char current();
+        char32_t current();
 
-        char next();
+        char32_t next();
 
-        char offset(size_t offset);
+        char32_t offset(size_t offset);
 
-        char consume();
+        char32_t consume();
 
     };
 

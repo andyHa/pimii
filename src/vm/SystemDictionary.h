@@ -13,15 +13,15 @@ namespace pimii {
     class SystemDictionary {
         MemoryManager &mm;
         ObjectPointer associationType;
-        Object *dictionary;
+        ObjectPointer dictionary;
 
-        Object *atPut(ObjectPointer key, ObjectPointer value, bool force);
+        ObjectPointer atPut(ObjectPointer key, ObjectPointer value, bool force);
 
-        void grow(Object *table);
+        void grow(ObjectPointer table);
 
-        void reInsert(Object *table, ObjectPointer association);
+        void reInsert(ObjectPointer table, ObjectPointer association);
 
-        Object *tryInsert(Offset index, Object *table, ObjectPointer key, ObjectPointer value, bool force);
+        ObjectPointer tryInsert(Offset index, ObjectPointer table, ObjectPointer key, ObjectPointer value, bool force);
 
     public:
         static const Offset DICTIONARY_SIZE;
@@ -36,9 +36,9 @@ namespace pimii {
         void installTypes(ObjectPointer systemDictionaryType, ObjectPointer arrayType, ObjectPointer associationType);
 
 
-        Object *atPut(ObjectPointer key, ObjectPointer value);
+        ObjectPointer atPut(ObjectPointer key, ObjectPointer value);
 
-        Object *at(ObjectPointer key);
+        ObjectPointer at(ObjectPointer key);
 
         ObjectPointer getValue(ObjectPointer key);
     };

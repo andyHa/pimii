@@ -17,9 +17,9 @@ namespace pimii {
         SymbolTable symbols;
         SystemDictionary dictionary;
         TypeSystem types;
-        Object *specialSelectors;
+        ObjectPointer specialSelectors;
 
-        static const inline Offset NUMBER_OF_SPECIAL_SELECTORS = 36;
+        static const inline Offset NUMBER_OF_SPECIAL_SELECTORS = 35;
     public:
         System();
 

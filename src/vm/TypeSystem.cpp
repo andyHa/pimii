@@ -3,7 +3,6 @@
 //
 
 #include "TypeSystem.h"
-#include "Nil.h"
 
 namespace pimii {
 
@@ -25,37 +24,37 @@ namespace pimii {
 
         // Create "MetaClass class"
         auto metaClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE, Nil::NIL));
-        metaClassClassType.getObject()->fields[TYPE_FIELD_NAME] = symbols.lookup("MetaClass class");
+        metaClassClassType[TYPE_FIELD_NAME] = symbols.lookup("MetaClass class");
 
         // Create "MetaClass"
-        metaClassType.getObject()->type = metaClassClassType;
-        metaClassType.getObject()->fields[TYPE_FIELD_NAME] = symbols.lookup("MetaClass");
-        systemDictionary.atPut(metaClassType.getObject()->fields[TYPE_FIELD_NAME], metaClassType);
+        const_cast<ObjectPointer *>(&metaClassType)->type(metaClassClassType);
+        metaClassType[TYPE_FIELD_NAME] = symbols.lookup("MetaClass");
+        systemDictionary.atPut(metaClassType[TYPE_FIELD_NAME], metaClassType);
 
         // Set type of "MetaClass class" to "MetaClass"
-        metaClassClassType.getObject()->type = metaClassType;
+        metaClassClassType.type(metaClassType);
 
         // Create "Object class"
-        auto objectClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE, metaClassType));
-        objectClassClassType.getObject()->fields[TYPE_FIELD_NAME] = symbols.lookup("Object class");
+        auto objectClassClassType = mm.allocObject(TYPE_SIZE, metaClassType);
+        objectClassClassType[TYPE_FIELD_NAME] = symbols.lookup("Object class");
 
         // Create "Object"
-        objectType.getObject()->type = objectClassClassType;
-        objectType.getObject()->fields[TYPE_FIELD_NAME] = symbols.lookup("Object");
-        systemDictionary.atPut(objectType.getObject()->fields[TYPE_FIELD_NAME], objectType);
+        const_cast<ObjectPointer *>(&objectType)->type(objectClassClassType);
+        objectType[TYPE_FIELD_NAME] = symbols.lookup("Object");
+        systemDictionary.atPut(objectType[TYPE_FIELD_NAME], objectType);
 
         // Create "Behaviour"
         auto behaviourType = makeType(objectType, "Behaviour", 0);
 
         // Make "Behaviour" the superclass of "MetaClass"
-        metaClassType.getObject()->fields[TYPE_FIELD_SUPERTYPE] = behaviourType;
-        metaClassClassType.getObject()->fields[TYPE_FIELD_SUPERTYPE] = behaviourType.getObject()->type;
+        metaClassType[TYPE_FIELD_SUPERTYPE] = behaviourType;
+        metaClassClassType[TYPE_FIELD_SUPERTYPE] = behaviourType.type();
 
         // Create "Class"
         completeType(classType, behaviourType, "Class");
 
         // Make "Class" the superclass of "Object class"
-        objectClassClassType.getObject()->fields[TYPE_FIELD_SUPERTYPE] = classType;
+        objectClassClassType[TYPE_FIELD_SUPERTYPE] = classType;
 
         // Create "Nil"
         completeType(nilType, objectType, "Nil");
@@ -88,28 +87,27 @@ namespace pimii {
     }
 
     ObjectPointer TypeSystem::makeType(ObjectPointer parent, const std::string &name, Offset typeFields) {
-        Object *metaType = mm.allocObject(TYPE_SIZE, metaClassType);
-        Object *type = mm.allocObject(TYPE_SIZE + typeFields, ObjectPointer(metaType));
-        metaType->fields[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
-        metaType->fields[TYPE_FIELD_SUPERTYPE] = parent.getObject()->type;
-        type->fields[TYPE_FIELD_NAME] = symbols.lookup(name);
-        type->fields[TYPE_FIELD_SUPERTYPE] = parent;
+        ObjectPointer metaType = mm.allocObject(TYPE_SIZE, metaClassType);
+        ObjectPointer type = mm.allocObject(TYPE_SIZE + typeFields, ObjectPointer(metaType));
+        metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
+        metaType[TYPE_FIELD_SUPERTYPE] = parent.type();
+        type[TYPE_FIELD_NAME] = symbols.lookup(name);
+        type[TYPE_FIELD_SUPERTYPE] = parent;
 
-        systemDictionary.atPut(type->fields[TYPE_FIELD_NAME], ObjectPointer(type));
+        systemDictionary.atPut(type[TYPE_FIELD_NAME], ObjectPointer(type));
         return ObjectPointer(type);
     }
 
     void TypeSystem::completeType(ObjectPointer type, ObjectPointer parent, const std::string &name) {
-        Object *typeObject = type.getObject();
-        Object *metaType = mm.allocObject(TYPE_SIZE, metaClassType);
-        typeObject->type = ObjectPointer(metaType);
+        ObjectPointer metaType = mm.allocObject(TYPE_SIZE, metaClassType);
+        type.type(metaType);
 
-        metaType->fields[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
-        metaType->fields[TYPE_FIELD_SUPERTYPE] = parent.getObject()->type;
-        typeObject->fields[TYPE_FIELD_NAME] = symbols.lookup(name);
-        typeObject->fields[TYPE_FIELD_SUPERTYPE] = parent;
+        metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
+        metaType[TYPE_FIELD_SUPERTYPE] = parent.type();
+        type[TYPE_FIELD_NAME] = symbols.lookup(name);
+        type[TYPE_FIELD_SUPERTYPE] = parent;
 
-        systemDictionary.atPut(typeObject->fields[TYPE_FIELD_NAME], ObjectPointer(type));
+        systemDictionary.atPut(type[TYPE_FIELD_NAME], ObjectPointer(type));
     }
 
 

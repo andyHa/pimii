@@ -19,7 +19,7 @@ namespace pimii {
         static const Offset FIELD_TABLE;
         static const Offset SIZE;
 
-        ObjectPointer tryInsert(Offset index, ObjectPointer table, const std::string &name);
+        ObjectPointer tryInsert(Offset index, ObjectPointer table, const std::string_view &name);
 
         void grow(ObjectPointer table);
 
@@ -28,7 +28,7 @@ namespace pimii {
     public:
         SymbolTable(MemoryManager &mm);
 
-        ObjectPointer lookup(const std::string &name);
+        ObjectPointer lookup(const std::string_view &name);
 
         void installTypes(ObjectPointer symbolTableType, ObjectPointer arrayType, ObjectPointer symbolType);
 

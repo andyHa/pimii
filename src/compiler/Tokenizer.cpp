@@ -6,15 +6,15 @@
 
 namespace pimii {
 
-    char BufferedReader::current() {
+    char32_t BufferedReader::current() {
         return offset(0);
     }
 
-    char BufferedReader::next() {
+    char32_t BufferedReader::next() {
         return offset(1);
     }
 
-    char BufferedReader::offset(size_t offset) {
+    char32_t BufferedReader::offset(size_t offset) {
         if (pos + offset < input.size()) {
             return input[pos + offset];
         }
@@ -22,7 +22,7 @@ namespace pimii {
         return 0;
     }
 
-    char BufferedReader::consume() {
+    char32_t BufferedReader::consume() {
         if (pos < input.size()) {
             return input[pos++];
         }

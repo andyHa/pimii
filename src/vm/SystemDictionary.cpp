@@ -3,7 +3,6 @@
 //
 
 #include "SystemDictionary.h"
-#include "Nil.h"
 
 namespace pimii {
 
@@ -16,86 +15,86 @@ namespace pimii {
 
     SystemDictionary::SystemDictionary(MemoryManager &mm) : mm(mm), associationType(Nil::NIL), dictionary(
             mm.allocObject(DICTIONARY_SIZE, Nil::NIL)) {
-        dictionary->fields[DICTIONARY_FIELD_TALLY] = ObjectPointer(0);
-        dictionary->fields[DICTIONARY_FIELD_TABLE] = ObjectPointer(mm.allocObject(512, Nil::NIL));
+        dictionary[DICTIONARY_FIELD_TALLY] = 0;
+        dictionary[DICTIONARY_FIELD_TABLE] = mm.allocObject(512, Nil::NIL);
     }
 
 
-    Object *SystemDictionary::atPut(ObjectPointer key, ObjectPointer value, bool force) {
-        Object *table = dictionary->fields[DICTIONARY_FIELD_TABLE].getObject();
-        Offset index = key.hash() % table->size;
+    ObjectPointer SystemDictionary::atPut(ObjectPointer key, ObjectPointer value, bool force) {
+        ObjectPointer table = dictionary[DICTIONARY_FIELD_TABLE];
+        Offset index = key.hash() % table.size();
 
-        for (Offset i = index; i < table->size; i++) {
-            Object *result = tryInsert(i, table, key, value, force);
-            if (result != nullptr) {
+        for (Offset i = index; i < table.size(); i++) {
+            ObjectPointer result = tryInsert(i, table, key, value, force);
+            if (result != Nil::NIL) {
                 return result;
             }
         }
         for (Offset i = 0; i < index; i++) {
-            Object *result = tryInsert(i, table, key, value, force);
-            if (result != nullptr) {
+            ObjectPointer result = tryInsert(i, table, key, value, force);
+            if (result != Nil::NIL) {
                 return result;
             }
         }
 
         //TODO horror
-        return nullptr;
+        return Nil::NIL;
     }
 
-    Object *SystemDictionary::atPut(ObjectPointer key, ObjectPointer value) {
+    ObjectPointer SystemDictionary::atPut(ObjectPointer key, ObjectPointer value) {
         return atPut(key, value, true);
     }
 
-    Object *
-    SystemDictionary::tryInsert(Offset index, Object *table, ObjectPointer key, ObjectPointer value, bool force) {
-        ObjectPointer association = table->fields[index];
+    ObjectPointer
+    SystemDictionary::tryInsert(Offset index, ObjectPointer table, ObjectPointer key, ObjectPointer value, bool force) {
+        ObjectPointer association = table[index];
         if (association == Nil::NIL) {
-            Object *newAssociation = mm.allocObject(ASSOCIATION_SIZE, associationType);
-            newAssociation->fields[ASSOCIATION_FIELD_KEY] = key;
-            newAssociation->fields[ASSOCIATION_FIELD_VALUE] = value;
-            table->fields[index] = ObjectPointer(newAssociation);
+            ObjectPointer newAssociation = mm.allocObject(ASSOCIATION_SIZE, associationType);
+            newAssociation[ASSOCIATION_FIELD_KEY] = key;
+            newAssociation[ASSOCIATION_FIELD_VALUE] = value;
+            table[index] = ObjectPointer(newAssociation);
 
-            SmallInteger newSize = dictionary->fields[DICTIONARY_FIELD_TALLY].getInt() + 1;
-            dictionary->fields[DICTIONARY_FIELD_TALLY] = ObjectPointer(newSize);
-            if (newSize > table->size * 0.75) {
+            SmallInteger newSize = dictionary[DICTIONARY_FIELD_TALLY].smallInt() + 1;
+            dictionary[DICTIONARY_FIELD_TALLY] = newSize;
+            if (newSize > table.size() * 0.75) {
                 grow(table);
             }
             return newAssociation;
-        } else if (association.getObject()->fields[ASSOCIATION_FIELD_KEY] == key) {
+        } else if (association[ASSOCIATION_FIELD_KEY] == key) {
             if (force) {
-                association.getObject()->fields[ASSOCIATION_FIELD_VALUE] = value;
+                association[ASSOCIATION_FIELD_VALUE] = value;
             }
-            return association.getObject();
+            return association;
         } else {
-            return nullptr;
+            return Nil::NIL;
         }
     }
 
-    void SystemDictionary::grow(Object *table) {
-        Object *newTable = mm.allocObject(table->size + 256, table->type);
-        dictionary->fields[DICTIONARY_FIELD_TABLE] = ObjectPointer(newTable);
+    void SystemDictionary::grow(ObjectPointer table) {
+        ObjectPointer newTable = mm.allocObject(table.size() + 256, table.type());
+        dictionary[DICTIONARY_FIELD_TABLE] = newTable;
 
-        for (Offset i = 0; i < table->size; i++) {
-            if (table->fields[i] != Nil::NIL) {
-                reInsert(newTable, table->fields[i]);
+        for (Offset i = 0; i < table.size(); i++) {
+            if (table[i] != Nil::NIL) {
+                reInsert(newTable, table[i]);
             }
         }
 
     }
 
-    void SystemDictionary::reInsert(Object *table, ObjectPointer association) {
-        ObjectPointer key = association.getObject()->fields[ASSOCIATION_FIELD_KEY];
-        Offset index = key.hash() % table->size;
+    void SystemDictionary::reInsert(ObjectPointer table, ObjectPointer association) {
+        ObjectPointer key = association[ASSOCIATION_FIELD_KEY];
+        Offset index = key.hash() % table.size();
 
-        for (Offset i = index; i < table->size; i++) {
-            if (table->fields[i] == Nil::NIL) {
-                table->fields[i] = association;
+        for (Offset i = index; i < table.size(); i++) {
+            if (table[i] == Nil::NIL) {
+                table[i] = association;
                 return;
             }
         }
         for (Offset i = 0; i < index; i++) {
-            if (table->fields[i] == Nil::NIL) {
-                table->fields[i] = association;
+            if (table[i] == Nil::NIL) {
+                table[i] = association;
                 return;
             }
         }
@@ -103,25 +102,25 @@ namespace pimii {
         //TODO horror
     }
 
-    Object *SystemDictionary::at(ObjectPointer key) {
+    ObjectPointer SystemDictionary::at(ObjectPointer key) {
         return atPut(key, Nil::NIL, false);
     }
 
     ObjectPointer SystemDictionary::getValue(ObjectPointer key) {
-        return at(key)->fields[ASSOCIATION_FIELD_VALUE];
+        return at(key)[ASSOCIATION_FIELD_VALUE];
     }
 
     void SystemDictionary::installTypes(ObjectPointer systemDictionaryType, ObjectPointer arrayType,
                                         ObjectPointer associationType) {
         this->associationType = associationType;
-        dictionary->type = systemDictionaryType;
+        dictionary.type(systemDictionaryType);
 
-        Object *table = dictionary->fields[DICTIONARY_FIELD_TABLE].getObject();
-        table->type = arrayType;
+        ObjectPointer table = dictionary[DICTIONARY_FIELD_TABLE];
+        table.type(arrayType);
 
-        for (Offset i = 0; i < table->size; i++) {
-            if (table->fields[i] != Nil::NIL) {
-                table->fields[i].getObject()->type = associationType;
+        for (Offset i = 0; i < table.size(); i++) {
+            if (table[i] != Nil::NIL) {
+                table[i].type(associationType);
             }
         }
     }

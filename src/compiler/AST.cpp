@@ -5,7 +5,6 @@
 #include <iostream>
 #include "AST.h"
 #include "../vm/Interpreter.h"
-#include "../vm/Strings.h"
 #include "../vm/Primitives.h"
 
 namespace pimii {
@@ -164,9 +163,9 @@ namespace pimii {
     }
 
     void LiteralString::emitByteCodes(EmitterContext &ctx) {
-        ObjectPointer string = Strings::make(ctx.getSystem().getMemoryManager(),
-                                             ctx.getSystem().getTypeSystem().stringType,
-                                             name);
+        ObjectPointer string = ctx.getSystem().getMemoryManager().allocString(name,
+                                             ctx.getSystem().getTypeSystem().stringType
+                                             );
         Offset index = ctx.addLiteral(string);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }

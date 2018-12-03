@@ -20,10 +20,10 @@ namespace pimii {
         System &system;
         Offset instructionPointer;
         Offset stackPointer;
-        Object *activeContext;
-        Object *homeContext;
-        Object *method;
-        ByteBuffer *opCodes;
+        ObjectPointer activeContext;
+        ObjectPointer homeContext;
+        ObjectPointer method;
+        ObjectPointer opCodes;
         Offset maxIP;
         Offset temporaryCount;
         ObjectPointer receiver;
@@ -83,15 +83,15 @@ namespace pimii {
         static inline const uint8_t OP_JUMP_BACK = 21;
         static inline const uint8_t OP_BLOCK_COPY = 22;
 
-        static inline const uint8_t LAST_PREFERRED_PRIMITIVE_SELECTOR = 23;
+        static inline const uint8_t LAST_PREFERRED_PRIMITIVE_SELECTOR = 22;
 
         explicit Interpreter(System &system);
 
         System& getSystem();
 
-        Object* getActiveContext();
+        ObjectPointer getActiveContext();
 
-        void newActiveContext(Object *context);
+        void newActiveContext(ObjectPointer context);
 
         void run();
 
@@ -125,9 +125,7 @@ namespace pimii {
 
         void send(ObjectPointer selector, Offset numArguments);
 
-        bool isBlockContext(Object *context);
-
-        void transfer(Offset numberOfFields, Object* src, Offset srcIndex, Object* dst, Offset destIndex);
+        bool isBlockContext(ObjectPointer context);
 
         Offset getInstructionPointer();
 

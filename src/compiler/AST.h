@@ -7,6 +7,7 @@
 
 
 #include "../vm/System.h"
+#include <vector>
 
 namespace pimii {
 

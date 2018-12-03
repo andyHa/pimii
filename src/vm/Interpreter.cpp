@@ -6,7 +6,6 @@
 #include <iostream>
 #include "Interpreter.h"
 #include "Primitives.h"
-#include "Nil.h"
 
 namespace pimii {
 
@@ -30,11 +29,11 @@ namespace pimii {
 
     Interpreter::Interpreter(System &system) : system(system) {
         // Install by emulating: "CompiledMethod class specialSelectors: <array>"
-        system.getTypeSystem().compiledMethodType.getObject()->fields[Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = system.getSpecialSelectors();
+        system.getTypeSystem().compiledMethodType[Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = system.getSpecialSelectors();
     }
 
     void Interpreter::run() {
-        while (activeContext != nullptr) {
+        while (activeContext != Nil::NIL) {
             dispatchOpCode(fetchInstruction());
         }
     }
@@ -117,22 +116,22 @@ namespace pimii {
                 push(literal(index));
                 return;
             case OP_PUSH_LITERAL_VARIABLE:
-                push(literal(index).getObject()->fields[SystemDictionary::ASSOCIATION_FIELD_VALUE]);
+                push(literal(index)[SystemDictionary::ASSOCIATION_FIELD_VALUE]);
                 return;
             case OP_PUSH_TEMPORARY:
                 push(temporary(index));
                 return;
             case OP_PUSH_RECEIVER_FIELD:
-                push(receiver.getObject()->fields[index]);
+                push(receiver[index]);
                 return;
             case OP_POP_AND_STORE_RECEIVER_FIELD:
-                receiver.getObject()->fields[index] = pop();
+                receiver[index] = pop();
                 return;
             case OP_POP_AND_STORE_IN_TEMPORARY:
                 temporary(index, pop());
                 return;
             case OP_POP_AND_STORE_IN_LITERAL_VARIABLE:
-                literal(index).getObject()->fields[SystemDictionary::ASSOCIATION_FIELD_VALUE] = pop();
+                literal(index)[SystemDictionary::ASSOCIATION_FIELD_VALUE] = pop();
                 return;
             case OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS:
                 send(literal(index), 0);
@@ -172,64 +171,64 @@ namespace pimii {
         }
     }
 
-    void Interpreter::newActiveContext(Object *context) {
-        if (activeContext != nullptr) {
+    void Interpreter::newActiveContext(ObjectPointer context) {
+        if (activeContext != Nil::NIL) {
             storeContextRegisters();
         }
 
         activeContext = context;
 
-        if (activeContext != nullptr) {
+        if (activeContext != Nil::NIL) {
             fetchContextRegisters();
         }
     }
 
     void Interpreter::storeContextRegisters() {
-        activeContext->fields[CONTEXT_IP_FIELD] = ObjectPointer(instructionPointer);
-        activeContext->fields[CONTEXT_SP_FIELD] = ObjectPointer(stackPointer);
+        activeContext[CONTEXT_IP_FIELD] = instructionPointer;
+        activeContext[CONTEXT_SP_FIELD] = stackPointer;
     }
 
     void Interpreter::fetchContextRegisters() {
         if (isBlockContext(activeContext)) {
-            homeContext = activeContext->fields[CONTEXT_HOME_FIELD].getObject();
+            homeContext = activeContext[CONTEXT_HOME_FIELD];
             temporaryCount = 0;
         } else {
             homeContext = activeContext;
-            getMethodType(homeContext->fields[CONTEXT_METHOD_FIELD], temporaryCount);
+            getMethodType(homeContext[CONTEXT_METHOD_FIELD], temporaryCount);
         }
 
-        receiver = homeContext->fields[CONTEXT_RECEIVER_FIELD];
-        method = homeContext->fields[CONTEXT_METHOD_FIELD].getObject();
-        opCodes = method->fields[COMPILED_METHOD_FIELD_OPCODES].getBytes();
-        maxIP = opCodes->size * sizeof(Word) - opCodes->odd;
-        instructionPointer = (Offset) activeContext->fields[CONTEXT_IP_FIELD].getInt();
-        stackPointer = (Offset) activeContext->fields[CONTEXT_SP_FIELD].getInt();;
+        receiver = homeContext[CONTEXT_RECEIVER_FIELD];
+        method = homeContext[CONTEXT_METHOD_FIELD];
+        opCodes = method[COMPILED_METHOD_FIELD_OPCODES];
+        maxIP = opCodes.byteSize();
+        instructionPointer = (Offset) activeContext[CONTEXT_IP_FIELD].smallInt();
+        stackPointer = (Offset) activeContext[CONTEXT_SP_FIELD].smallInt();
     }
 
     uint8_t Interpreter::fetchInstruction() {
         if (instructionPointer >= maxIP) {
             return OP_RETURN;
         }
-        return (uint8_t) opCodes->bytes[instructionPointer++];
+        return (uint8_t) opCodes.fetchByte(instructionPointer++);
     }
 
     void Interpreter::push(ObjectPointer value) {
         //TODO stack limits!
-        activeContext->fields[getStackBasePointer() + (stackPointer++)] = value;
+        activeContext[getStackBasePointer() + (stackPointer++)] = value;
     }
 
     ObjectPointer Interpreter::pop() {
         if (stackPointer == 0) {
             return Nil::NIL; //TODO error?
         }
-        return activeContext->fields[getStackBasePointer() + (--stackPointer)];
+        return activeContext[getStackBasePointer() + (--stackPointer)];
     }
 
     ObjectPointer Interpreter::stackTop() {
         if (stackPointer == 0) {
             return Nil::NIL; //TODO error?
         }
-        return activeContext->fields[getStackBasePointer() + (stackPointer - 1)];
+        return activeContext[getStackBasePointer() + (stackPointer - 1)];
     }
 
     ObjectPointer Interpreter::stackValue(Offset offset) {
@@ -237,7 +236,7 @@ namespace pimii {
         if (effectiveStackPointer <= 0) {
             return Nil::NIL; //TODO error?
         }
-        return activeContext->fields[getStackBasePointer() + (effectiveStackPointer - 1)];
+        return activeContext[getStackBasePointer() + (effectiveStackPointer - 1)];
     }
 
     void Interpreter::pop(Offset number) {
@@ -255,32 +254,30 @@ namespace pimii {
     }
 
     ObjectPointer Interpreter::sender() {
-        return homeContext->fields[CONTEXT_SENDER_FIELD];
+        return homeContext[CONTEXT_SENDER_FIELD];
     }
 
     ObjectPointer Interpreter::caller() {
-        return activeContext->fields[CONTEXT_SENDER_FIELD];
+        return activeContext[CONTEXT_SENDER_FIELD];
     }
 
     ObjectPointer Interpreter::temporary(Offset index) {
         //TODO limits
-        std::cout << "Read Temporary: " << index << system.info(homeContext->fields[CONTEXT_FIXED_SIZE + index]) << std::endl;
-        return homeContext->fields[CONTEXT_FIXED_SIZE + index];
+        return homeContext[CONTEXT_FIXED_SIZE + index];
     }
 
     void Interpreter::temporary(Offset index, ObjectPointer value) {
-        std::cout << "Write Temporary: " << index << system.info(value) << std::endl;
-        homeContext->fields[CONTEXT_FIXED_SIZE + index] = value;
+        homeContext[CONTEXT_FIXED_SIZE + index] = value;
     }
 
     ObjectPointer Interpreter::literal(Offset index) {
-        return method->fields[COMPILED_METHOD_FIELD_LITERALS_START + index];
+        return method[COMPILED_METHOD_FIELD_LITERALS_START + index];
     }
 
     void Interpreter::returnValueTo(ObjectPointer returnValue, ObjectPointer targetContext) {
-        newActiveContext(targetContext.getObject());
-        std::cout << returnValue.getInt() << std::endl;
-        if (activeContext != nullptr) {
+        newActiveContext(targetContext);
+        std::cout << returnValue.smallInt() << std::endl;
+        if (activeContext != Nil::NIL) {
             push(returnValue);
         }
     }
@@ -288,37 +285,36 @@ namespace pimii {
     ObjectPointer Interpreter::findMethod(ObjectPointer type, ObjectPointer selector) {
         lookup:
         if (type == Nil::NIL ||
-            type.getObject()->fields[TypeSystem::TYPE_FIELD_SELECTORS] == Nil::NIL) {
+            type[TypeSystem::TYPE_FIELD_SELECTORS] == Nil::NIL) {
             return Nil::NIL;
         }
 
-        Object *typeObject = type.getObject();
 
-        Object *selectors = typeObject->fields[TypeSystem::TYPE_FIELD_SELECTORS].getObject();
-        Offset index = selector.hash() % selectors->size;
-        for (Offset i = index; i < selectors->size; i++) {
-            if (selectors->fields[i] == selector) {
-                return typeObject->fields[TypeSystem::TYPE_FIELD_METHODS].getObject()->fields[i];
-            } else if (selectors->fields[i] == Nil::NIL) {
-                type = typeObject->fields[TypeSystem::TYPE_FIELD_SUPERTYPE];
+        ObjectPointer selectors = type[TypeSystem::TYPE_FIELD_SELECTORS];
+        Offset index = selector.hash() % selectors.size();
+        for (Offset i = index; i < selectors.size(); i++) {
+            if (selectors[i] == selector) {
+                return type[TypeSystem::TYPE_FIELD_METHODS][i];
+            } else if (selectors[i] == Nil::NIL) {
+                type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
                 goto lookup;
             }
         }
         for (size_t i = 0; i < index; i++) {
-            if (selectors->fields[i] == selector) {
-                return typeObject->fields[TypeSystem::TYPE_FIELD_METHODS].getObject()->fields[i];
-            } else if (selectors->fields[i] == Nil::NIL) {
-                type = typeObject->fields[TypeSystem::TYPE_FIELD_SUPERTYPE];
+            if (selectors[i] == selector) {
+                return type[TypeSystem::TYPE_FIELD_METHODS][i];
+            } else if (selectors[i] == Nil::NIL) {
+                type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
                 goto lookup;
             }
         }
 
-        type = typeObject->fields[TypeSystem::TYPE_FIELD_SUPERTYPE];
+        type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
         goto lookup;
     }
 
     CompiledMethodType Interpreter::getMethodType(ObjectPointer method, Offset &offset) {
-        auto header = (Offset) method.getObject()->fields[COMPILED_METHOD_FIELD_HEADER].getInt();
+        auto header = (Offset) method[COMPILED_METHOD_FIELD_HEADER].smallInt();
         offset = header >> 2;
         return (CompiledMethodType) (header & 0b11);
     }
@@ -338,12 +334,12 @@ namespace pimii {
         } else if (methodType == CompiledMethodType::RETURN_FIELD) {
             //TODO range check
             pop(); //assert numArguments == 0
-            push(newReceiver.getObject()->fields[index]);
+            push(newReceiver[index]);
             return;
         } else if (methodType == CompiledMethodType::POP_AND_STORE_FIELD) {
             //TODO range check
             //pop(); //assert numArguments == 1
-            newReceiver.getObject()->fields[index] = pop();
+            newReceiver[index] = pop();
             //push(newReceiver);
             return;
         }
@@ -374,9 +370,8 @@ namespace pimii {
         return Primitives::executePrimitive(index, *this, numberOfArguments);
     }
 
-    bool Interpreter::isBlockContext(Object *context) {
-        return context->fields[CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].getObjectPointerType() ==
-               ObjectPointerType::SMALL_INT;
+    bool Interpreter::isBlockContext(ObjectPointer context) {
+        return context[CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].isSmallInt();
     }
 
     System &Interpreter::getSystem() {
@@ -387,14 +382,8 @@ namespace pimii {
         return instructionPointer;
     }
 
-    Object *Interpreter::getActiveContext() {
+    ObjectPointer Interpreter::getActiveContext() {
         return activeContext;
-    }
-
-    void Interpreter::transfer(Offset numberOfFields, Object *src, Offset srcIndex, Object *dst, Offset destIndex) {
-        for (Offset idx = 0; idx < numberOfFields; idx++) {
-            dst->fields[destIndex + idx] = src->fields[srcIndex + idx];
-        }
     }
 
     Offset Interpreter::getStackPointer() {
@@ -433,13 +422,13 @@ namespace pimii {
     }
 
     void Interpreter::performBlockCopy(uint8_t blockArgumentCount) {
-        Object *newContext = system.getMemoryManager().allocObject(
-                activeContext->size, system.getTypeSystem().blockContextType);
+        ObjectPointer newContext = system.getMemoryManager().allocObject(
+                activeContext.size(), system.getTypeSystem().blockContextType);
 
-        newContext->fields[Interpreter::CONTEXT_INITIAL_IP_FIELD] = ObjectPointer(
-                instructionPointer + 2);
-        newContext->fields[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = ObjectPointer(blockArgumentCount);
-        newContext->fields[Interpreter::CONTEXT_HOME_FIELD] = ObjectPointer(homeContext);
+        newContext[Interpreter::CONTEXT_INITIAL_IP_FIELD] =
+                instructionPointer + 2;
+        newContext[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = blockArgumentCount;
+        newContext[Interpreter::CONTEXT_HOME_FIELD] = homeContext;
         push(ObjectPointer(newContext));
     }
 

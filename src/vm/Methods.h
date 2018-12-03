@@ -7,6 +7,8 @@
 
 #include "MemoryManager.h"
 #include "TypeSystem.h"
+#include <vector>
+
 
 namespace pimii {
 
@@ -15,11 +17,11 @@ namespace pimii {
         MemoryManager &mm;
         TypeSystem &types;
 
-        bool tryInsert(ObjectPointer type, Offset index, Object *selectors,
-                       Object *methods,
+        bool tryInsert(ObjectPointer type, Offset index, ObjectPointer selectors,
+                       ObjectPointer methods,
                        ObjectPointer selector, ObjectPointer method);
 
-        void grow(ObjectPointer type, Object *selectors, Object *methods);
+        void grow(ObjectPointer type, ObjectPointer selectors, ObjectPointer methods);
 
         ObjectPointer createHeaderOnlyMethod(SmallInteger headerValue);
 
@@ -33,11 +35,6 @@ namespace pimii {
                                    const std::vector<ObjectPointer> &literals,
                                    const std::vector<uint8_t> &byteCodes);
 
-        ObjectPointer createPrimitiveMethod(Offset primitiveIndex);
-
-        ObjectPointer createReturnFieldMethod(Offset fieldIndex);
-
-        ObjectPointer createPopAndStoreFieldMethod(Offset fieldIndex);
     };
 
 }

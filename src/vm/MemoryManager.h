@@ -47,7 +47,7 @@ namespace pimii {
     public:
         MemoryManager() : currentPage(new Page(16777216 / sizeof(Word))) {};
 
-        inline Object *allocObject(Offset numberOfFields, ObjectPointer type) {
+        inline ObjectPointer allocObject(Offset numberOfFields, ObjectPointer type) {
 //            if (numberOfFields > 1048576) {
 //                std::shared_ptr<Page> page = std::shared_ptr<Page>(new Page(3+numberOfFields));
 //                auto result = (Object *) page->alloc(3 + numberOfFields);
@@ -70,14 +70,14 @@ namespace pimii {
 
 
             auto data = malloc(sizeof(Word) + sizeof(ObjectPointer) * (numberOfFields + 1));
+            //TODO remove
             memset(data, 0, sizeof(Word) + sizeof(ObjectPointer) * (numberOfFields + 1));
-            auto result = (Object *) data;
-            result->size = numberOfFields;
-            result->type = type;
-            return result;
+            return ObjectPointer(data, type, numberOfFields);
         }
 
-        ByteBuffer *allocBytes(Offset numberOfBytes, ObjectPointer type);
+        ObjectPointer allocBytes(Offset numberOfBytes, ObjectPointer type);
+
+        ObjectPointer allocString(std::string_view string, ObjectPointer type);
     };
 
 }

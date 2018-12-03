@@ -18,7 +18,7 @@ namespace pimii {
         SymbolTable &symbols;
         SystemDictionary &systemDictionary;
 
-        void completeType(ObjectPointer type, ObjectPointer superType, const std::string& name);
+        void completeType(ObjectPointer type, ObjectPointer superType, const std::string &name);
 
     public:
         static inline const Offset TYPE_FIELD_SUPERTYPE = 0;
@@ -26,8 +26,8 @@ namespace pimii {
         static inline const Offset TYPE_FIELD_NUMBER_OF_FIXED_FIELDS = 2;
         static inline const Offset TYPE_FIELD_FIELD_NAMES = 3;
         static inline const Offset TYPE_FIELD_TALLY = 4;
-        static inline const Offset TYPE_FIELD_SELECTORS =5;
-        static inline const Offset TYPE_FIELD_METHODS =6;
+        static inline const Offset TYPE_FIELD_SELECTORS = 5;
+        static inline const Offset TYPE_FIELD_METHODS = 6;
         static inline const Offset TYPE_SIZE = 7;
 
         TypeSystem(MemoryManager &mm, SymbolTable &symbols, SystemDictionary &systemDictionary);
@@ -46,7 +46,7 @@ namespace pimii {
         const ObjectPointer methodContextType;
         const ObjectPointer blockContextType;
 
-        ObjectPointer makeType(ObjectPointer parent,const std::string& name, Offset typeFields);
+        ObjectPointer makeType(ObjectPointer parent, const std::string &name, Offset typeFields);
     };
 
 }

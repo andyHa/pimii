@@ -5,7 +5,6 @@
 #include "src/vm/Methods.h"
 #include "src/compiler/Tokenizer.h"
 #include "src/compiler/Compiler.h"
-#include "src/vm/Nil.h"
 
 
 int main() {
@@ -38,11 +37,11 @@ int main() {
 //    pimii::ObjectPointer method = methods.createMethod(0, literals, ops);
 //
 //
-    pimii::Object *context = sys.getMemoryManager().allocObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+    pimii::ObjectPointer context = sys.getMemoryManager().allocObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
                                                                 pimii::Nil::NIL);
-    context->fields[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer(0);
-    context->fields[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer(0);
-    context->fields[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
+    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer(0);
+    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer(0);
+    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
 
     interpreter.newActiveContext(context);
     interpreter.run();
