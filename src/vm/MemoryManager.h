@@ -6,32 +6,36 @@
 #define MEM_MEMORYMANAGER_H
 
 #include "ObjectPointer.h"
+#include <list>
+#include <vector>
+#include <deque>
 
 namespace pimii {
 
-    class Page {
+    class Segment {
         Word *basePointer;
         Word *allocationPointer;
         Word *endPointer;
         Word size;
+        std::shared_ptr<Segment> previous;
     public:
-        explicit Page(Word sizeOfPool) : size(sizeOfPool) {
+        explicit Segment(Word sizeOfPool, std::shared_ptr<Segment> previous) : size(sizeOfPool),
+                                                                               previous(std::move(previous)) {
             basePointer = (Word *) calloc(size, sizeof(Word));
             endPointer = basePointer + size;
             allocationPointer = basePointer;
+            memset(allocationPointer, 0, (endPointer - allocationPointer) * sizeof(Word));
         }
 
-        ~Page() {
+        ~Segment() {
             free(basePointer);
         }
 
-        std::shared_ptr<Page> previous;
-
-        void initialize() {
-            memset(allocationPointer, 0, endPointer - allocationPointer);
+        Word sizeInWord() {
+            return size;
         }
 
-        inline Word *alloc(size_t numberOfWords) {
+        Word *alloc(size_t numberOfWords) {
             if (allocationPointer + numberOfWords < endPointer) {
                 Word *result = allocationPointer;
                 allocationPointer += numberOfWords;
@@ -40,44 +44,115 @@ namespace pimii {
                 return nullptr;
             }
         }
+
+        const std::shared_ptr<Segment> &previousSegment() {
+            return previous;
+        }
+
+    };
+
+    class Allocator {
+        std::shared_ptr<Segment> currentSegment;
+        Word allocated;
+        Word used;
+
+        static const inline Word SEGMENT_SIZE = 400000;
+
+        Word *allocateInNewSegment(size_t numberOfWords) {
+            currentSegment = std::make_shared<Segment>(SEGMENT_SIZE, currentSegment);
+            allocated += SEGMENT_SIZE;
+            used += numberOfWords;
+
+            return currentSegment->alloc(numberOfWords);
+        }
+
+    public:
+        Allocator() : currentSegment(nullptr), allocated(0), used(0) {}
+
+        Word allocatedWords() {
+            return allocated;
+        }
+
+        Word usedWords() {
+            return used;
+        }
+
+        Word *alloc(size_t numberOfWords) {
+            if (currentSegment != nullptr) {
+                Word *result = currentSegment->alloc(numberOfWords);
+                if (result != nullptr) {
+                    used += numberOfWords;
+                    return result;
+                }
+            }
+
+            return allocateInNewSegment(numberOfWords);
+        }
+
+        const std::shared_ptr<Segment> &lastSegment() {
+            return currentSegment;
+        }
+    };
+
+    class MemoryManager;
+
+    class GarbageCollector {
+        std::deque<ObjectPointer> work;
+        MemoryManager &mm;
+        static const inline char STATE_ORIGINAL = 0;
+        static const inline char STATE_PARTIALLY_MOVED = 1;
+        static const inline char STATE_FULLY_MOVED = 2;
+        static const inline char STATE_ROOT = 3;
+
+
+        ObjectPointer copyObject(ObjectPointer obj);
+
+        ObjectPointer copyBuffer(ObjectPointer buffer);
+
+        void translateObject(ObjectPointer obj);
+
+        ObjectPointer translateField(ObjectPointer field);
+
+    public:
+        GarbageCollector(MemoryManager &mm) : mm(mm) {}
+
+        void run();
     };
 
     class MemoryManager {
-        std::shared_ptr<Page> currentPage;
+        std::unique_ptr<Allocator> rootAllocator;
+        std::list<ObjectPointer> rootObjects;
+        std::unique_ptr<Allocator> activeObjects;
+        std::unique_ptr<Allocator> buffers;
+
+        static const inline Word LARGE_OBJECT_SIZE = 100000;
+
     public:
-        MemoryManager() : currentPage(new Page(16777216 / sizeof(Word))) {};
+        MemoryManager() : rootAllocator(std::make_unique<Allocator>()),
+                          activeObjects(std::make_unique<Allocator>()),
+                          buffers(std::make_unique<Allocator>()) {};
 
-        inline ObjectPointer allocObject(Offset numberOfFields, ObjectPointer type) {
-//            if (numberOfFields > 1048576) {
-//                std::shared_ptr<Page> page = std::shared_ptr<Page>(new Page(3+numberOfFields));
-//                auto result = (Object *) page->alloc(3 + numberOfFields);
-//                page->previous = currentPage->previous;
-//                currentPage->previous = page;
-//                return result;
-//            }
-//            auto result = (Object *) currentPage->alloc(3 + numberOfFields);
-//
-//            if (result == nullptr) {
-//                std::shared_ptr<Page> page = std::shared_ptr<Page>(new Page(16777216 / sizeof(Word)));
-//                result = (Object *) page->alloc(3 + numberOfFields);
-//                page->previous = currentPage;
-//                currentPage = page;
-//                return result;
-//            }
-//
-//            result->size = numberOfFields;
-//            result->type = type;
-
-
-            auto data = malloc(sizeof(Word) + sizeof(ObjectPointer) * (numberOfFields + 1));
-            //TODO remove
-            memset(data, 0, sizeof(Word) + sizeof(ObjectPointer) * (numberOfFields + 1));
-            return ObjectPointer(data, type, numberOfFields);
+        const std::list<ObjectPointer> &roots() {
+            return rootObjects;
         }
 
-        ObjectPointer allocBytes(Offset numberOfBytes, ObjectPointer type);
+        void gc();
 
-        ObjectPointer allocString(std::string_view string, ObjectPointer type);
+        ObjectPointer makeRootObject(Offset numberOfFields, ObjectPointer type);
+
+        inline ObjectPointer makeObject(Offset numberOfFields, ObjectPointer type) {
+            auto *buffer = activeObjects->alloc(numberOfFields + 2);
+            if (buffer == nullptr) {
+                //TODO heap overflow
+                throw std::bad_alloc();
+            }
+
+            return ObjectPointer(buffer, type, numberOfFields);
+        }
+
+        ObjectPointer makeBuffer(Offset numberOfBytes, ObjectPointer type);
+
+        ObjectPointer makeString(std::string_view string, ObjectPointer type);
     };
 
 }

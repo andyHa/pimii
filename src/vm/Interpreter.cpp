@@ -156,8 +156,6 @@ namespace pimii {
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS:
-                system.debug(ObjectPointer(method));
-
                 if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 2)) {
                     send(system.getSpecialSelector(index), 2);
                 }
@@ -276,7 +274,6 @@ namespace pimii {
 
     void Interpreter::returnValueTo(ObjectPointer returnValue, ObjectPointer targetContext) {
         newActiveContext(targetContext);
-        std::cout << returnValue.smallInt() << std::endl;
         if (activeContext != Nil::NIL) {
             push(returnValue);
         }
@@ -422,7 +419,7 @@ namespace pimii {
     }
 
     void Interpreter::performBlockCopy(uint8_t blockArgumentCount) {
-        ObjectPointer newContext = system.getMemoryManager().allocObject(
+        ObjectPointer newContext = system.getMemoryManager().makeObject(
                 activeContext.size(), system.getTypeSystem().blockContextType);
 
         newContext[Interpreter::CONTEXT_INITIAL_IP_FIELD] =

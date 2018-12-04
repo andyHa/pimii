@@ -8,22 +8,22 @@ namespace pimii {
 
     TypeSystem::TypeSystem(MemoryManager &mm, SymbolTable &symbols, SystemDictionary &systemDictionary) :
             mm(mm), symbols(symbols), systemDictionary(systemDictionary),
-            nilType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            metaClassType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            classType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            objectType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            smallIntType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            symbolType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            stringType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            associationType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            arrayType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            byteArrayType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            methodContextType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            blockContextType(mm.allocObject(TYPE_SIZE, Nil::NIL)),
-            compiledMethodType(mm.allocObject(TYPE_SIZE + 1, Nil::NIL)) {
+            nilType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            metaClassType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            classType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            objectType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            smallIntType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            symbolType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            stringType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            associationType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            arrayType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            byteArrayType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            methodContextType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            blockContextType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            compiledMethodType(mm.makeRootObject(TYPE_SIZE + 1, Nil::NIL)) {
 
         // Create "MetaClass class"
-        auto metaClassClassType = ObjectPointer(mm.allocObject(TYPE_SIZE, Nil::NIL));
+        auto metaClassClassType = ObjectPointer(mm.makeObject(TYPE_SIZE, Nil::NIL));
         metaClassClassType[TYPE_FIELD_NAME] = symbols.lookup("MetaClass class");
 
         // Create "MetaClass"
@@ -35,7 +35,7 @@ namespace pimii {
         metaClassClassType.type(metaClassType);
 
         // Create "Object class"
-        auto objectClassClassType = mm.allocObject(TYPE_SIZE, metaClassType);
+        auto objectClassClassType = mm.makeObject(TYPE_SIZE, metaClassType);
         objectClassClassType[TYPE_FIELD_NAME] = symbols.lookup("Object class");
 
         // Create "Object"
@@ -87,8 +87,8 @@ namespace pimii {
     }
 
     ObjectPointer TypeSystem::makeType(ObjectPointer parent, const std::string &name, Offset typeFields) {
-        ObjectPointer metaType = mm.allocObject(TYPE_SIZE, metaClassType);
-        ObjectPointer type = mm.allocObject(TYPE_SIZE + typeFields, ObjectPointer(metaType));
+        ObjectPointer metaType = mm.makeObject(TYPE_SIZE, metaClassType);
+        ObjectPointer type = mm.makeObject(TYPE_SIZE + typeFields, ObjectPointer(metaType));
         metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
         metaType[TYPE_FIELD_SUPERTYPE] = parent.type();
         type[TYPE_FIELD_NAME] = symbols.lookup(name);
@@ -99,7 +99,7 @@ namespace pimii {
     }
 
     void TypeSystem::completeType(ObjectPointer type, ObjectPointer parent, const std::string &name) {
-        ObjectPointer metaType = mm.allocObject(TYPE_SIZE, metaClassType);
+        ObjectPointer metaType = mm.makeObject(TYPE_SIZE, metaClassType);
         type.type(metaType);
 
         metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");

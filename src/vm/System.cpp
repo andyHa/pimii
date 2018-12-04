@@ -11,9 +11,9 @@ namespace pimii {
 
     System::System()
             : mm(), symbols(mm), dictionary(mm), types(mm, symbols, dictionary),
-              trueValue(mm.allocObject(0, Nil::NIL)),
-              falseValue(mm.allocObject(0, Nil::NIL)),
-              specialSelectors(mm.allocObject(NUMBER_OF_SPECIAL_SELECTORS, types.arrayType)) {
+              trueValue(mm.makeRootObject(0, Nil::NIL)),
+              falseValue(mm.makeRootObject(0, Nil::NIL)),
+              specialSelectors(mm.makeRootObject(NUMBER_OF_SPECIAL_SELECTORS, types.arrayType)) {
 
         ObjectPointer symbolTableType = types.makeType(types.objectType, "SymbolTable", 0);
         symbols.installTypes(symbolTableType, types.arrayType, types.symbolType);
@@ -116,9 +116,7 @@ namespace pimii {
 
     int System::getSpecialSelectorIndex(const std::string &name) {
         ObjectPointer symbol = symbols.lookup(name);
-        debug(symbol);
         for (Offset index = 0; index < NUMBER_OF_SPECIAL_SELECTORS; index++) {
-            debug(specialSelectors[index]);
             if (symbol == specialSelectors[index]) {
                 return index;
             }

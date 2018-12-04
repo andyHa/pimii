@@ -146,7 +146,7 @@ namespace pimii {
 
         for (auto i = 0; i < temporaries.size(); i++) {
             context.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY,
-                                  (Offset) context.getTemporaries().size() - i -1);
+                                  (Offset) context.getTemporaries().size() - i - 1);
         }
 
         for (auto &statement : statements) {
@@ -163,9 +163,8 @@ namespace pimii {
     }
 
     void LiteralString::emitByteCodes(EmitterContext &ctx) {
-        ObjectPointer string = ctx.getSystem().getMemoryManager().allocString(name,
-                                             ctx.getSystem().getTypeSystem().stringType
-                                             );
+        ObjectPointer string = ctx.getSystem().getMemoryManager().makeString(name,
+                                                                             ctx.getSystem().getTypeSystem().stringType);
         Offset index = ctx.addLiteral(string);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
@@ -242,7 +241,7 @@ namespace pimii {
         if (selector == "whileTrue:" && arguments.size() == 1 && receiver->type() == STMT_BLOCK &&
             arguments[0]->type() == STMT_BLOCK) {
             Offset loopAddress = ctx.nextOpCodePosition();
-            receiver->emitByteCodes(ctx);
+            reinterpret_cast<Block *>(receiver.get())->emitInner(ctx);
             Offset jumpOnFalseLocation = ctx.pushJumpPlaceholder();
             reinterpret_cast<Block *>(arguments[0].get())->emitInner(ctx);
             Offset delta = ctx.nextOpCodePosition() - loopAddress;

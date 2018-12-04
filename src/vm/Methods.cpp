@@ -15,9 +15,9 @@ namespace pimii {
                             ObjectPointer compiledMethod) {
         if (type[TypeSystem::TYPE_FIELD_SELECTORS] == Nil::NIL) {
             type[TypeSystem::TYPE_FIELD_SELECTORS] = ObjectPointer(
-                    mm.allocObject(8, types.arrayType));
+                    mm.makeObject(8, types.arrayType));
             type[TypeSystem::TYPE_FIELD_METHODS] = ObjectPointer(
-                    mm.allocObject(8, types.arrayType));
+                    mm.makeObject(8, types.arrayType));
             type[TypeSystem::TYPE_FIELD_TALLY] = ObjectPointer(0);
         }
 
@@ -64,9 +64,9 @@ namespace pimii {
 
     void Methods::grow(ObjectPointer type, ObjectPointer selectors, ObjectPointer methods) {
         type[TypeSystem::TYPE_FIELD_SELECTORS] =
-                mm.allocObject(selectors.size() + 8, types.arrayType);
+                mm.makeObject(selectors.size() + 8, types.arrayType);
         type[TypeSystem::TYPE_FIELD_METHODS] =
-                mm.allocObject(selectors.size() + 8, types.arrayType);
+                mm.makeObject(selectors.size() + 8, types.arrayType);
 
         for (Offset i = 0; i < selectors.size(); i++) {
             if (selectors[i] != Nil::NIL) {
@@ -78,13 +78,13 @@ namespace pimii {
     ObjectPointer Methods::createMethod(Offset numberOfTemporaries,
                                         const std::vector<ObjectPointer> &literals,
                                         const std::vector<uint8_t> &byteCodes) {
-        auto method = mm.allocObject(Interpreter::COMPILED_METHOD_SIZE + (Offset) literals.size(),
+        auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE + (Offset) literals.size(),
                                      types.compiledMethodType);
         Offset literalIndex = Interpreter::COMPILED_METHOD_FIELD_LITERALS_START;
         for (auto literal : literals) {
             method[literalIndex++] = literal;
         }
-        auto bytes = mm.allocBytes((Offset) byteCodes.size(), types.byteArrayType);
+        auto bytes = mm.makeBuffer((Offset) byteCodes.size(), types.byteArrayType);
         method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = ObjectPointer(
                 (numberOfTemporaries << 2) | CompiledMethodType::BYTECODES);
         method[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = bytes;
@@ -94,7 +94,7 @@ namespace pimii {
     }
 
     ObjectPointer Methods::createHeaderOnlyMethod(SmallInteger headerValue) {
-        auto method = mm.allocObject(Interpreter::COMPILED_METHOD_SIZE, types.compiledMethodType);
+        auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE, types.compiledMethodType);
         method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = headerValue;
         return ObjectPointer(method);
     }

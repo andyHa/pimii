@@ -3,6 +3,20 @@ project(pimii)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(pimii main.cpp src/vm/ObjectPointer.h src/vm/SystemDictionary.cpp src/vm/SystemDictionary.h src/vm/Interpreter.cpp src/vm/Interpreter.h src/vm/SymbolTable.cpp src/vm/SymbolTable.h src/vm/MemoryManager.cpp src/vm/MemoryManager.h src/vm/TypeSystem.cpp src/vm/TypeSystem.h src/vm/System.cpp src/vm/System.h src/vm/Methods.cpp src/vm/Methods.h src/vm/Primitives.cpp src/vm/Primitives.h src/compiler/Compiler.cpp src/compiler/Compiler.h src/compiler/AST.h src/compiler/AST.cpp src/compiler/Tokenizer.cpp src/compiler/Tokenizer.h)
+#set(CMAKE_BUILD_TYPE Release)
+SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 
-add_executable(pimii-tests src/tests/tests-main.cpp src/tests/ObjectPointerSpec.cpp)
+add_executable(pimii main.cpp
+        src/vm/SystemDictionary.cpp
+        src/vm/Interpreter.cpp
+        src/vm/SymbolTable.cpp
+        src/vm/MemoryManager.cpp
+        src/vm/TypeSystem.cpp
+        src/vm/System.cpp
+        src/vm/Methods.cpp
+        src/vm/Primitives.cpp
+        src/compiler/Compiler.cpp
+        src/compiler/AST.cpp
+        src/compiler/Tokenizer.cpp)
+
+add_executable(pimii-tests src/tests/tests-main.cpp src/tests/ObjectPointerSpec.cpp src/vm/MemoryManager.cpp)

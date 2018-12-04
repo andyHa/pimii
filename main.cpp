@@ -16,10 +16,9 @@ int main() {
 //    }
 //
     pimii::System sys;
-    //pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.", pimii::Nil::NIL);
-    pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
+    pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4000 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.", pimii::Nil::NIL);
+    //pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
     pimii::ObjectPointer method = compiler.compile(sys);
-    sys.debug(method);
     pimii::Interpreter interpreter(sys);
 //
 //    std::vector<pimii::ObjectPointer> literals;
@@ -37,7 +36,7 @@ int main() {
 //    pimii::ObjectPointer method = methods.createMethod(0, literals, ops);
 //
 //
-    pimii::ObjectPointer context = sys.getMemoryManager().allocObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+    pimii::ObjectPointer context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
                                                                 pimii::Nil::NIL);
     context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer(0);
     context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer(0);
@@ -45,6 +44,21 @@ int main() {
 
     interpreter.newActiveContext(context);
     interpreter.run();
+
+    sys.getMemoryManager().gc();
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+                                                                     pimii::Nil::NIL);
+    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer(0);
+    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer(0);
+    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
+
+    interpreter.newActiveContext(context);
+    interpreter.run();
+
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "us"
+              << std::endl;
 
     return 0;
 }

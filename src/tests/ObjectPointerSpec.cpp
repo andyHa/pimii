@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "../vm/ObjectPointer.h"
+#include "../vm/MemoryManager.h"
 #include <memory>
 
 namespace pimii {
@@ -39,6 +40,32 @@ namespace pimii {
 
         REQUIRE(pointer.fetchByte(0) == 'A');
         REQUIRE(pointer.fetchByte(9) == 'Z');
+    }
+
+    TEST_CASE("Storing GC infos works", "[objectpointer]") {
+        MemoryManager mm;
+        ObjectPointer test = mm.makeObject(2, Nil::NIL);
+
+        REQUIRE(test.gcInfo() == 0);
+        REQUIRE(test.size() == 2);
+
+        test.gcInfo(5);
+
+        REQUIRE(test.gcInfo() == 5);
+        REQUIRE(test.size() == 2);
+
+
+        ObjectPointer testBuffer = mm.makeBuffer(10, Nil::NIL);
+
+        REQUIRE(testBuffer.gcInfo() == 0);
+        REQUIRE(testBuffer.byteSize() == 10);
+        REQUIRE(testBuffer.size() == 2);
+
+        testBuffer.gcInfo(5);
+
+        REQUIRE(testBuffer.gcInfo() == 5);
+        REQUIRE(testBuffer.byteSize() == 10);
+        REQUIRE(testBuffer.size() == 2);
     }
 
 }

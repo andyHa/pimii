@@ -73,7 +73,6 @@ namespace pimii {
     }
 
     bool Primitives::add(Interpreter &interpreter, Offset argumentCount) {
-        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -201,23 +200,19 @@ namespace pimii {
             return false;
         }
 
-        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
-
         interpreter.getActiveContext().transferFieldsTo(
                 interpreter.getStackBasePointer() + interpreter.getStackPointer() - argumentCount, blockContext,
                 Interpreter::CONTEXT_FIXED_SIZE, argumentCount);
 
         interpreter.pop(argumentCount + 1);
 
-        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
-
         blockContext[Interpreter::CONTEXT_IP_FIELD] =
                 blockContext[Interpreter::CONTEXT_INITIAL_IP_FIELD].smallInt();
         blockContext[Interpreter::CONTEXT_SP_FIELD] = argumentCount;
         blockContext[Interpreter::CONTEXT_CALLER_FIELD] = interpreter.getActiveContext();
-//        interpreter.getSystem().debug(ObjectPointer(block));
+
         interpreter.newActiveContext(blockContext);
-        interpreter.getSystem().debug(ObjectPointer(interpreter.getActiveContext()));
+
         return true;
     }
 

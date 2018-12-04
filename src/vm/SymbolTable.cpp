@@ -12,9 +12,9 @@ namespace pimii {
     const Offset SymbolTable::SIZE = 2;
 
     SymbolTable::SymbolTable(MemoryManager &mm) : mm(mm), symbolType(Nil::NIL), symbolTable(
-            mm.allocObject(SIZE, Nil::NIL)) {
+            mm.makeRootObject(SIZE, Nil::NIL)) {
         symbolTable[FIELD_TALLY] = 0;
-        symbolTable[FIELD_TABLE] = ObjectPointer(mm.allocObject(512, Nil::NIL));
+        symbolTable[FIELD_TABLE] = ObjectPointer(mm.makeObject(512, Nil::NIL));
     }
 
     ObjectPointer SymbolTable::lookup(const std::string_view &name) {
@@ -42,7 +42,8 @@ namespace pimii {
 
     ObjectPointer SymbolTable::tryInsert(Offset index, ObjectPointer table, const std::string_view &name) {
         if (table[index] == Nil::NIL) {
-            table[index] = mm.allocString(name, symbolType);
+            //TODO make root string
+            table[index] = mm.makeString(name, symbolType);
             SmallInteger newSize = symbolTable[FIELD_TALLY].smallInt() + 1;
             symbolTable[FIELD_TALLY] = newSize;
             if (newSize > table.size() * 0.75) {
@@ -56,7 +57,7 @@ namespace pimii {
     }
 
     void SymbolTable::grow(ObjectPointer table) {
-        ObjectPointer newTable = mm.allocObject(table.size() + 256, table.type());
+        ObjectPointer newTable = mm.makeObject(table.size() + 256, table.type());
         symbolTable[FIELD_TABLE] = newTable;
         for (Offset i = 0; i < table.size(); i++) {
             if (table[i] != Nil::NIL) {

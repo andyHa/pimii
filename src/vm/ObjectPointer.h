@@ -147,14 +147,21 @@ namespace pimii {
             unmask()->type = *reinterpret_cast<Word *>(&newType);
         }
 
+        inline ObjectPointer gcSuccessor() const {
+            return type();
+        }
+
+        inline void gcSuccessor(ObjectPointer successor) {
+            type(successor);
+        }
+
         inline char gcInfo() const {
-            return (char) ((unmask()->size >> (usableSizeBytes() * 8)) & GC_MASK);
+            return (char) ((unmask()->size >> (usableSizeBytes() * 8)) & GC_MASK) >> 4;
         }
 
         inline void gcInfo(char info) {
             unmask()->size &= clearGCMask();
-            unmask()->size |= ((Word) (info & GC_MASK)) << (usableSizeBytes() * 8);
-
+            unmask()->size |= ((Word) ((info << 4) & GC_MASK)) << (usableSizeBytes() * 8);
         }
 
         inline bool isSmallInt() const noexcept {

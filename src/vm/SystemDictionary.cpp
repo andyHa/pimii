@@ -14,9 +14,9 @@ namespace pimii {
     const Offset SystemDictionary::ASSOCIATION_FIELD_VALUE = 1;
 
     SystemDictionary::SystemDictionary(MemoryManager &mm) : mm(mm), associationType(Nil::NIL), dictionary(
-            mm.allocObject(DICTIONARY_SIZE, Nil::NIL)) {
+            mm.makeRootObject(DICTIONARY_SIZE, Nil::NIL)) {
         dictionary[DICTIONARY_FIELD_TALLY] = 0;
-        dictionary[DICTIONARY_FIELD_TABLE] = mm.allocObject(512, Nil::NIL);
+        dictionary[DICTIONARY_FIELD_TABLE] = mm.makeObject(512, Nil::NIL);
     }
 
 
@@ -49,7 +49,7 @@ namespace pimii {
     SystemDictionary::tryInsert(Offset index, ObjectPointer table, ObjectPointer key, ObjectPointer value, bool force) {
         ObjectPointer association = table[index];
         if (association == Nil::NIL) {
-            ObjectPointer newAssociation = mm.allocObject(ASSOCIATION_SIZE, associationType);
+            ObjectPointer newAssociation = mm.makeObject(ASSOCIATION_SIZE, associationType);
             newAssociation[ASSOCIATION_FIELD_KEY] = key;
             newAssociation[ASSOCIATION_FIELD_VALUE] = value;
             table[index] = ObjectPointer(newAssociation);
@@ -71,7 +71,7 @@ namespace pimii {
     }
 
     void SystemDictionary::grow(ObjectPointer table) {
-        ObjectPointer newTable = mm.allocObject(table.size() + 256, table.type());
+        ObjectPointer newTable = mm.makeObject(table.size() + 256, table.type());
         dictionary[DICTIONARY_FIELD_TABLE] = newTable;
 
         for (Offset i = 0; i < table.size(); i++) {
