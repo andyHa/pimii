@@ -47,6 +47,16 @@ namespace pimii {
         return mask;
     }
 
+    constexpr Word clearGCMask() {
+        Word mask = 0x0F;
+        for (int i = 0; i < usableSizeBytes(); i++) {
+            mask = mask << 8;
+            mask |= 0xFF;
+        }
+
+        return mask;
+    }
+
 
     class ObjectPointer {
 
@@ -123,28 +133,28 @@ namespace pimii {
         inline ObjectPointer(const void *object, ObjectPointer type, Offset wordSize, Offset odd) noexcept : data(
                 ((Word) object) | BUFFER) {
 
-            unmask()->size = (Word) wordSize | (Word) (odd & ODD_MASK) << (usableSizeBytes() * 8);
+            unmask()->size = (Word) wordSize | (Word) ((odd & ODD_MASK) << (usableSizeBytes() * 8));
             unmask()->type = *reinterpret_cast<Word *>(&type);
         };
 
         inline ObjectPointer(const ObjectPointer &other) noexcept = default;
 
-        inline ObjectPointer type() {
-#ifdef PIMII_ENABLE_CHECKS
-            if (getObjectPointerType() != BUFFER && getObjectPointerType() != OBJECT) {
-                throw std::bad_cast();
-            }
-#endif
+        inline ObjectPointer type() const {
             return *reinterpret_cast<ObjectPointer *>(&unmask()->type);
         }
 
         inline void type(ObjectPointer newType) {
-#ifdef PIMII_ENABLE_CHECKS
-            if (getObjectPointerType() != BUFFER && getObjectPointerType() != OBJECT) {
-                throw std::bad_cast();
-            }
-#endif
             unmask()->type = *reinterpret_cast<Word *>(&newType);
+        }
+
+        inline char gcInfo() const {
+            return (char) ((unmask()->size >> (usableSizeBytes() * 8)) & GC_MASK);
+        }
+
+        inline void gcInfo(char info) {
+            unmask()->size &= clearGCMask();
+            unmask()->size |= ((Word) (info & GC_MASK)) << (usableSizeBytes() * 8);
+
         }
 
         inline bool isSmallInt() const noexcept {
