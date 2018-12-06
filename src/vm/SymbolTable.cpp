@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "SymbolTable.h"
+#include "Looping.h"
 
 namespace pimii {
 
@@ -19,40 +20,25 @@ namespace pimii {
 
     ObjectPointer SymbolTable::lookup(const std::string_view &name) {
         std::hash<std::string_view> hasher;
-        Offset hash = (Offset) hasher(name);
+        auto hash = (Offset) hasher(name);
         ObjectPointer table = symbolTable[FIELD_TABLE];
 
-        Offset index = hash % table.size();
-        for (Offset i = index; i < table.size(); i++) {
-            ObjectPointer result = tryInsert(i, table, name);
-            if (result != Nil::NIL) {
-                return result;
-            }
-        }
-        for (Offset i = 0; i < index; i++) {
-            ObjectPointer result = tryInsert(i, table, name);
-            if (result != Nil::NIL) {
-                return result;
+        for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
+            if (table[loop()] == Nil::NIL) {
+                //TODO make root string
+                table[loop()] = mm.makeString(name, symbolType);
+                SmallInteger newSize = symbolTable[FIELD_TALLY].smallInt() + 1;
+                symbolTable[FIELD_TALLY] = newSize;
+                if (newSize > table.size() * 0.75) {
+                    grow(table);
+                }
+                return table[loop()];
+            } else if (table[loop()].compare(name.data(), name.size() + 1) == 0) {
+                return table[loop()];
             }
         }
 
         //TODO horrible error
-        return Nil::NIL;
-    }
-
-    ObjectPointer SymbolTable::tryInsert(Offset index, ObjectPointer table, const std::string_view &name) {
-        if (table[index] == Nil::NIL) {
-            //TODO make root string
-            table[index] = mm.makeString(name, symbolType);
-            SmallInteger newSize = symbolTable[FIELD_TALLY].smallInt() + 1;
-            symbolTable[FIELD_TALLY] = newSize;
-            if (newSize > table.size() * 0.75) {
-                grow(table);
-            }
-            return table[index];
-        } else if (table[index].compare(name.data(), name.size() + 1) == 0) {
-            return table[index];
-        }
         return Nil::NIL;
     }
 
@@ -70,16 +56,9 @@ namespace pimii {
     void SymbolTable::reInsert(ObjectPointer table, ObjectPointer symbol) {
         Offset hash = symbol.hashString();
 
-        Offset index = hash % table.size();
-        for (Offset i = index; i < table.size(); i++) {
-            if (table[i] == Nil::NIL) {
-                table[i] = symbol;
-                return;
-            }
-        }
-        for (Offset i = 0; i < index; i++) {
-            if (table[i] == Nil::NIL) {
-                table[i] = symbol;
+        for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
+            if (table[loop()] == Nil::NIL) {
+                table[loop()] = symbol;
                 return;
             }
         }

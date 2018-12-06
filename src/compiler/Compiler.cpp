@@ -8,17 +8,13 @@
 
 namespace pimii {
 
-    const std::vector<Error> &Compiler::getErrors() const {
-        return errors;
-    }
-
-    ObjectPointer Compiler::compile(System &system) {
+    ObjectPointer Compiler::compile(System& system) {
         EmitterContext context(system);
 
         parseSelector(context);
         parseTemporaries(context);
 
-        while (!tokenizer.current().isEOI()) {
+        while (!tokenizer.current().isEOI() && tokenizer.current().type != SEPARATOR) {
             std::unique_ptr<Statement> stmt = statement();
             stmt->emitByteCodes(context);
             if (tokenizer.current().type == FULLSTOP) {
@@ -38,7 +34,13 @@ namespace pimii {
         return methods.createMethod(context.getMaxTemporaries(), context.getLiterals(), context.getOpCodes());
     }
 
-    void Compiler::parseSelector(EmitterContext &ctx) {
+    void Compiler::compileAndAdd(pimii::System& system) {
+        ObjectPointer method = compile(system);
+        Methods methods(system.getMemoryManager(), system.getTypeSystem());
+        methods.addMethod(type, system.getSymbolTable().lookup(selector), method);
+    }
+
+    void Compiler::parseSelector(EmitterContext& ctx) {
         if (tokenizer.current().type == OPERATOR) {
             selector += tokenizer.consume().value;
             if (tokenizer.current().type == NAME) {
@@ -77,7 +79,7 @@ namespace pimii {
         }
     }
 
-    void Compiler::parseTemporaries(EmitterContext &ctx) {
+    void Compiler::parseTemporaries(EmitterContext& ctx) {
         if (tokenizer.current().type != OPERATOR || tokenizer.current().value != "|") {
             return;
         }
@@ -238,7 +240,7 @@ namespace pimii {
 
     std::unique_ptr<Expression> Compiler::parseBlock() {
         tokenizer.consume();
-        std::unique_ptr<Block> block = std::unique_ptr<Block>(new Block());
+        auto block = std::unique_ptr<Block>(new Block());
         while (tokenizer.current().type == COLON) {
             tokenizer.consume();
             if (tokenizer.current().type == NAME) {
@@ -277,7 +279,6 @@ namespace pimii {
         auto call = new MethodCall();
         call->receiver = std::move(receiver);
         call->selector = tokenizer.consume().value;
-        call->arguments.emplace_back(atom());
 
         return std::unique_ptr<Expression>(call);
     }

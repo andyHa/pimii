@@ -6,6 +6,7 @@
 #include <iostream>
 #include "Interpreter.h"
 #include "Primitives.h"
+#include "Looping.h"
 
 namespace pimii {
 
@@ -82,16 +83,16 @@ namespace pimii {
                         push(Nil::NIL);
                         return;
                     case OP_PUSH_MINUS_ONE_INDEX:
-                        push(ObjectPointer(-1));
+                        push(ObjectPointer::forSmallInt(-1));
                         return;
                     case OP_PUSH_ZERO_INDEX:
-                        push(ObjectPointer(0));
+                        push(ObjectPointer::forSmallInt(0));
                         return;
                     case OP_PUSH_ONE_INDEX:
-                        push(ObjectPointer(1));
+                        push(ObjectPointer::forSmallInt(1));
                         return;
                     case OP_PUSH_TWO_INDEX:
-                        push(ObjectPointer(2));
+                        push(ObjectPointer::forSmallInt(2));
                         return;
                 }
                 //TODO
@@ -280,34 +281,28 @@ namespace pimii {
     }
 
     ObjectPointer Interpreter::findMethod(ObjectPointer type, ObjectPointer selector) {
-        lookup:
-        if (type == Nil::NIL ||
-            type[TypeSystem::TYPE_FIELD_SELECTORS] == Nil::NIL) {
-            return Nil::NIL;
+        while (type != Nil::NIL && type[TypeSystem::TYPE_FIELD_SELECTORS] != Nil::NIL) {
+            ObjectPointer method = findMethodInType(type, selector);
+            if (method != Nil::NIL) {
+                return method;
+            }
+            type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
         }
 
+        return Nil::NIL;
+    }
 
+    ObjectPointer Interpreter::findMethodInType(ObjectPointer type, ObjectPointer selector) {
         ObjectPointer selectors = type[TypeSystem::TYPE_FIELD_SELECTORS];
-        Offset index = selector.hash() % selectors.size();
-        for (Offset i = index; i < selectors.size(); i++) {
-            if (selectors[i] == selector) {
-                return type[TypeSystem::TYPE_FIELD_METHODS][i];
-            } else if (selectors[i] == Nil::NIL) {
-                type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
-                goto lookup;
-            }
-        }
-        for (size_t i = 0; i < index; i++) {
-            if (selectors[i] == selector) {
-                return type[TypeSystem::TYPE_FIELD_METHODS][i];
-            } else if (selectors[i] == Nil::NIL) {
-                type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
-                goto lookup;
+        for (Looping loop = Looping(selectors.size(), selector.hash()); loop.hasNext(); loop.next()) {
+            if (selectors[loop()] == selector) {
+                return type[TypeSystem::TYPE_FIELD_METHODS][loop()];
+            } else if (selectors[loop()] == Nil::NIL) {
+                return Nil::NIL;
             }
         }
 
-        type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
-        goto lookup;
+        return Nil::NIL;
     }
 
     CompiledMethodType Interpreter::getMethodType(ObjectPointer method, Offset &offset) {

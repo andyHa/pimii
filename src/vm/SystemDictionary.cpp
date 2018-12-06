@@ -3,6 +3,7 @@
 //
 
 #include "SystemDictionary.h"
+#include "Looping.h"
 
 namespace pimii {
 
@@ -19,21 +20,28 @@ namespace pimii {
         dictionary[DICTIONARY_FIELD_TABLE] = mm.makeObject(512, Nil::NIL);
     }
 
-
     ObjectPointer SystemDictionary::atPut(ObjectPointer key, ObjectPointer value, bool force) {
         ObjectPointer table = dictionary[DICTIONARY_FIELD_TABLE];
-        Offset index = key.hash() % table.size();
 
-        for (Offset i = index; i < table.size(); i++) {
-            ObjectPointer result = tryInsert(i, table, key, value, force);
-            if (result != Nil::NIL) {
-                return result;
-            }
-        }
-        for (Offset i = 0; i < index; i++) {
-            ObjectPointer result = tryInsert(i, table, key, value, force);
-            if (result != Nil::NIL) {
-                return result;
+        for (Looping loop = Looping(table.size(), key.hash()); loop.hasNext(); loop.next()) {
+            ObjectPointer association = table[loop()];
+            if (association == Nil::NIL) {
+                ObjectPointer newAssociation = mm.makeObject(ASSOCIATION_SIZE, associationType);
+                newAssociation[ASSOCIATION_FIELD_KEY] = key;
+                newAssociation[ASSOCIATION_FIELD_VALUE] = value;
+                table[loop()] = ObjectPointer(newAssociation);
+
+                SmallInteger newSize = dictionary[DICTIONARY_FIELD_TALLY].smallInt() + 1;
+                dictionary[DICTIONARY_FIELD_TALLY] = newSize;
+                if (newSize > table.size() * 0.75) {
+                    grow(table);
+                }
+                return newAssociation;
+            } else if (association[ASSOCIATION_FIELD_KEY] == key) {
+                if (force) {
+                    association[ASSOCIATION_FIELD_VALUE] = value;
+                }
+                return association;
             }
         }
 
@@ -43,31 +51,6 @@ namespace pimii {
 
     ObjectPointer SystemDictionary::atPut(ObjectPointer key, ObjectPointer value) {
         return atPut(key, value, true);
-    }
-
-    ObjectPointer
-    SystemDictionary::tryInsert(Offset index, ObjectPointer table, ObjectPointer key, ObjectPointer value, bool force) {
-        ObjectPointer association = table[index];
-        if (association == Nil::NIL) {
-            ObjectPointer newAssociation = mm.makeObject(ASSOCIATION_SIZE, associationType);
-            newAssociation[ASSOCIATION_FIELD_KEY] = key;
-            newAssociation[ASSOCIATION_FIELD_VALUE] = value;
-            table[index] = ObjectPointer(newAssociation);
-
-            SmallInteger newSize = dictionary[DICTIONARY_FIELD_TALLY].smallInt() + 1;
-            dictionary[DICTIONARY_FIELD_TALLY] = newSize;
-            if (newSize > table.size() * 0.75) {
-                grow(table);
-            }
-            return newAssociation;
-        } else if (association[ASSOCIATION_FIELD_KEY] == key) {
-            if (force) {
-                association[ASSOCIATION_FIELD_VALUE] = value;
-            }
-            return association;
-        } else {
-            return Nil::NIL;
-        }
     }
 
     void SystemDictionary::grow(ObjectPointer table) {
@@ -84,17 +67,10 @@ namespace pimii {
 
     void SystemDictionary::reInsert(ObjectPointer table, ObjectPointer association) {
         ObjectPointer key = association[ASSOCIATION_FIELD_KEY];
-        Offset index = key.hash() % table.size();
 
-        for (Offset i = index; i < table.size(); i++) {
-            if (table[i] == Nil::NIL) {
-                table[i] = association;
-                return;
-            }
-        }
-        for (Offset i = 0; i < index; i++) {
-            if (table[i] == Nil::NIL) {
-                table[i] = association;
+        for (Looping loop = Looping(table.size(), key.hash()); loop.hasNext(); loop.next()) {
+            if (table[loop()] == Nil::NIL) {
+                table[loop()] = association;
                 return;
             }
         }

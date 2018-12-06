@@ -3,7 +3,10 @@
 //
 
 #include <deque>
+#include <iostream>
+
 #include "MemoryManager.h"
+#include "TypeSystem.h"
 
 namespace pimii {
 
@@ -15,6 +18,7 @@ namespace pimii {
         }
 
         ObjectPointer result = ObjectPointer(buffer, type, numberOfFields);
+        result.gcInfo(3);
         rootObjects.push_back(result);
         return result;
     }
@@ -45,17 +49,26 @@ namespace pimii {
     }
 
     void MemoryManager::gc() {
-        std::cout << "Objects: " << activeObjects->usedWords() << std::endl;
-        std::cout << "Buffers: " << buffers->usedWords() << std::endl;
+        std::cout << "Objects-Size: " << activeObjects->usedWords() << std::endl;
+        std::cout << "Objects-Count: " << activeObjects->objectCount() << std::endl;
+        std::cout << "Buffers-Size: " << buffers->usedWords() << std::endl;
+        std::cout << "Buffers-Count: " << buffers->objectCount() << std::endl;
+        std::cout << "Root-Size: " << rootAllocator->usedWords() << std::endl;
+        std::cout << "Root-Count: " << rootAllocator->objectCount() << std::endl;
         std::unique_ptr<Allocator> garbageObjects = std::move(activeObjects);
-        std::unique_ptr<Allocator> garbageBuffers = std::move(buffers);
         activeObjects = std::make_unique<Allocator>();
+
+        std::unique_ptr<Allocator> garbageBuffers = std::move(buffers);
         buffers = std::make_unique<Allocator>();
 
-        GarbageCollector collector(*this);
+        GarbageCollector collector(*this, true);
         collector.run();
-        std::cout << "Objects: " << activeObjects->usedWords() << std::endl;
-        std::cout << "Buffers: " << buffers->usedWords() << std::endl;
+        std::cout << "Objects-Size: " << activeObjects->usedWords() << std::endl;
+        std::cout << "Objects-Count: " << activeObjects->objectCount() << std::endl;
+        std::cout << "Buffers-Size: " << buffers->usedWords() << std::endl;
+        std::cout << "Buffers-Count: " << buffers->objectCount() << std::endl;
+        std::cout << "Root-Size: " << rootAllocator->usedWords() << std::endl;
+        std::cout << "Root-Count: " << rootAllocator->objectCount() << std::endl;
     }
 
     void GarbageCollector::run() {
@@ -65,33 +78,53 @@ namespace pimii {
             translateObject(root);
         }
 
+
         int objectsMoved = 0;
         while (!work.empty()) {
             ObjectPointer obj = work.front();
             work.pop_front();
+
             translateObject(obj);
             objectsMoved++;
         }
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "us, Moved: " << objectsMoved
+        std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()
+                  << "us, Moved: " << objectsMoved
                   << std::endl;
     }
 
     ObjectPointer GarbageCollector::copyObject(ObjectPointer obj) {
+        if (obj.gcInfo() == STATE_ROOT) {
+            std::cout << "Problem";
+        }
+
+        if (std::find(mm.seen.begin(), mm.seen.end(), obj) == mm.seen.end()) {
+            ;
+            std::cout << obj.hash() << " " << obj.size() << " " << obj.type()[TypeSystem::TYPE_FIELD_NAME].stringView() << std::endl;
+        }
+
+
         obj.gcInfo(STATE_FULLY_MOVED);
         ObjectPointer copy = mm.makeObject(obj.size(), obj.type());
         obj.transferFieldsTo(0, copy, 0, obj.size());
         copy.gcInfo(STATE_PARTIALLY_MOVED);
         obj.gcSuccessor(copy);
-
         work.push_back(copy);
 
         return copy;
     }
 
     ObjectPointer GarbageCollector::copyBuffer(ObjectPointer buffer) {
+        if (buffer.gcInfo() == STATE_ROOT) {
+            std::cout << "Problem";
+        }
         buffer.gcInfo(STATE_FULLY_MOVED);
+
+        if (!collectBuffers) {
+            buffer.type(translateField(buffer.type()));
+            return buffer;
+        }
 
         ObjectPointer copy = mm.makeBuffer(buffer.byteSize(), translateField(buffer.type()));
         buffer.transferBytesTo(copy, buffer.byteSize());

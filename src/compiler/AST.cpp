@@ -184,7 +184,7 @@ namespace pimii {
             return;
         }
 
-        Offset index = ctx.findOrAddLiteral(ObjectPointer(number));
+        Offset index = ctx.findOrAddLiteral(ObjectPointer::forSmallInt(number));
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 

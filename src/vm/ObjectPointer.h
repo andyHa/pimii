@@ -5,37 +5,13 @@
 #ifndef MEM_OBJECTPOINTER_H
 #define MEM_OBJECTPOINTER_H
 
-#include <cinttypes>
-#include <typeinfo>
-#include <cstring>
 #include <string>
-#include <iostream>
 
+#include "../common/types.h"
 
 #define PIMII_ENABLE_CHECKS
 
 namespace pimii {
-
-    typedef unsigned long long Word;
-    typedef int_fast32_t SmallInteger;
-    typedef float Decimal;
-    typedef uint_fast16_t Offset;
-
-    constexpr SmallInteger minSmallInt() {
-        return (SmallInteger) ((std::numeric_limits<Word>::min() >> 3) * -1);
-    }
-
-    constexpr SmallInteger maxSmallInt() {
-        return (SmallInteger) ((std::numeric_limits<Word>::max() >> 3) - 1);
-    }
-
-    constexpr Offset maxOffset() {
-        return (Offset) (std::numeric_limits<Word>::max() >> 8);
-    }
-
-    constexpr Offset usableSizeBytes() {
-        return sizeof(Word) - 1;
-    }
 
     constexpr Word sizeMask() {
         Word mask = 0x00;
@@ -106,69 +82,75 @@ namespace pimii {
             return unmask();
         }
 
-        static inline const Word TYPE_MASK = 0b11;
-        static inline const Word ODD_MASK = 0x0F;
-        static inline const Word GC_MASK = 0xF0;
+        constexpr static Word TYPE_MASK = 0b11;
+        constexpr static Word ODD_MASK = 0x0F;
+        constexpr static Word GC_MASK = 0xF0;
 
         Word highNibble() const {
             return unmask()->size >> (usableSizeBytes() * 8);
         }
 
+        explicit ObjectPointer(Word data) noexcept : data(data) {};
     public:
+        ObjectPointer() noexcept : data(0) {}
 
-        inline ObjectPointer() noexcept : data(0) {};
+        ObjectPointer(const ObjectPointer &other) noexcept = default;
 
-        explicit inline ObjectPointer(SmallInteger intValue) noexcept : data(
-                ((Word) (intValue) << 2) | ObjectPointerType::SMALL_INT) {};
+        static ObjectPointer forObject(Word data) noexcept {
+            return ObjectPointer(data);
+        }
 
-        explicit inline ObjectPointer(Decimal floatValue) noexcept : data(
-                ((Word) (floatValue) << 2) | ObjectPointerType::DECIMAL) {};
+        static ObjectPointer forSmallInt(SmallInteger intValue) noexcept {
+            return ObjectPointer(((Word) (intValue) << 2) | ObjectPointerType::SMALL_INT);
+        }
 
-        inline ObjectPointer(const void *object, ObjectPointer type, Offset numberOfFields) noexcept : data(
+        static ObjectPointer forDecimal(Decimal floatValue) noexcept {
+            return ObjectPointer(((Word) (floatValue) << 2) | ObjectPointerType::DECIMAL);
+        }
+
+        ObjectPointer(const void *object, ObjectPointer type, Offset numberOfFields) noexcept : data(
                 ((Word) object) | OBJECT) {
             unmask()->size = numberOfFields;
             unmask()->type = *reinterpret_cast<Word *>(&type);
         };
 
-        inline ObjectPointer(const void *object, ObjectPointer type, Offset wordSize, Offset odd) noexcept : data(
+        ObjectPointer(const void *object, ObjectPointer type, Offset wordSize, Offset odd) noexcept : data(
                 ((Word) object) | BUFFER) {
 
             unmask()->size = (Word) wordSize | (Word) ((odd & ODD_MASK) << (usableSizeBytes() * 8));
             unmask()->type = *reinterpret_cast<Word *>(&type);
         };
 
-        inline ObjectPointer(const ObjectPointer &other) noexcept = default;
-
-        inline ObjectPointer type() const {
+        ObjectPointer type() const {
             return *reinterpret_cast<ObjectPointer *>(&unmask()->type);
         }
 
-        inline void type(ObjectPointer newType) {
+        void type(ObjectPointer newType) {
             unmask()->type = *reinterpret_cast<Word *>(&newType);
         }
 
-        inline ObjectPointer gcSuccessor() const {
+        ObjectPointer gcSuccessor() const {
             return type();
         }
 
-        inline void gcSuccessor(ObjectPointer successor) {
+        void gcSuccessor(ObjectPointer successor) {
             type(successor);
         }
 
-        inline char gcInfo() const {
+        char gcInfo() const {
             return (char) ((unmask()->size >> (usableSizeBytes() * 8)) & GC_MASK) >> 4;
         }
 
-        inline void gcInfo(char info) {
+        void gcInfo(char info) {
             unmask()->size &= clearGCMask();
             unmask()->size |= ((Word) ((info << 4) & GC_MASK)) << (usableSizeBytes() * 8);
         }
 
-        inline bool isSmallInt() const noexcept {
+        bool isSmallInt() const noexcept {
             return getObjectPointerType() == SMALL_INT;
         }
 
-        inline SmallInteger smallInt() const {
+        SmallInteger smallInt() const {
 #ifdef PIMII_ENABLE_CHECKS
             if (getObjectPointerType() != SMALL_INT) {
                 throw std::bad_cast();
@@ -245,7 +227,7 @@ namespace pimii {
             Offset thisSize = byteSize();
             Offset otherSize = other.byteSize();
             if (thisSize != otherSize) {
-                return thisSize - otherSize;
+                return thisSize > otherSize ? 1 : -1;
             }
 
             return memcmp(&buffer()->fields[0], &other.buffer()->fields[0], thisSize);
@@ -269,11 +251,6 @@ namespace pimii {
             return *this;
         }
 
-        inline ObjectPointer &operator=(const Decimal &rhs) noexcept {
-            data = ((Word) (rhs) << 2) | ObjectPointerType::DECIMAL;
-            return *this;
-        }
-
         inline bool operator==(const ObjectPointer &rhs) const noexcept {
             return data == rhs.data;
         }
@@ -290,7 +267,7 @@ namespace pimii {
 
     class Nil {
     public:
-        static const inline ObjectPointer NIL = {};
+        static const inline ObjectPointer NIL;
     };
 
 }

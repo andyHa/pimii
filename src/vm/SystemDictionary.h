@@ -21,8 +21,6 @@ namespace pimii {
 
         void reInsert(ObjectPointer table, ObjectPointer association);
 
-        ObjectPointer tryInsert(Offset index, ObjectPointer table, ObjectPointer key, ObjectPointer value, bool force);
-
     public:
         static const Offset DICTIONARY_SIZE;
         static const Offset DICTIONARY_FIELD_TALLY;

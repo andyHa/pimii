@@ -6,15 +6,15 @@
 
 namespace pimii {
 
-    char32_t BufferedReader::current() {
+    char BufferedReader::current() {
         return offset(0);
     }
 
-    char32_t BufferedReader::next() {
+    char BufferedReader::next() {
         return offset(1);
     }
 
-    char32_t BufferedReader::offset(size_t offset) {
+    char BufferedReader::offset(size_t offset) {
         if (pos + offset < input.size()) {
             return input[pos + offset];
         }
@@ -22,7 +22,7 @@ namespace pimii {
         return 0;
     }
 
-    char32_t BufferedReader::consume() {
+    char BufferedReader::consume() {
         if (pos < input.size()) {
             return input[pos++];
         }
@@ -121,9 +121,17 @@ namespace pimii {
 
         if (isOperator(reader.current())) {
             std::string op;
+            bool allDashes = reader.current() == '-';
             while (isOperator(reader.current())) {
+                if (reader.current() != '-') {
+                    allDashes = false;
+                }
                 op += reader.consume();
             }
+            if (op.length() >= 5 && allDashes) {
+                return {line, SEPARATOR, op};
+            }
+
             return {line, OPERATOR, op};
         }
 
@@ -266,7 +274,7 @@ namespace pimii {
     }
 
     Offset Tokenizer::currentLine() {
-        return line;
+        return current().lineNumber;
     }
 
 

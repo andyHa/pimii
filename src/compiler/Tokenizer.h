@@ -17,13 +17,13 @@ namespace pimii {
     public:
         explicit BufferedReader(std::string_view input) : input(input), pos(0) {};
 
-        char32_t current();
+        char current();
 
-        char32_t next();
+        char next();
 
-        char32_t offset(size_t offset);
+        char offset(size_t offset);
 
-        char32_t consume();
+        char consume();
 
     };
 
@@ -38,6 +38,7 @@ namespace pimii {
         LITERAL_SYMBOL,
         ASSIGNMENT,
         OPERATOR,
+        SEPARATOR,
         COLON,
         SEMICOLON,
         CARET,
@@ -105,6 +106,8 @@ namespace pimii {
         Token consume();
 
         Offset currentLine();
+
+        //void reportAndConsumeUnexpectedToken
     };
 
 }

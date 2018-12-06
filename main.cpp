@@ -1,13 +1,21 @@
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
+
 #include "src/vm/Interpreter.h"
 #include "src/vm/Primitives.h"
 #include "src/vm/Methods.h"
 #include "src/compiler/Tokenizer.h"
 #include "src/compiler/Compiler.h"
+#include "src/compiler/SourceFileParser.h"
 
 
 int main() {
+
+
+    std::cout << pimii::minSmallInt() << std::endl;
+    std::cout << pimii::maxSmallInt() << std::endl;
+    std::cout << sizeof(std::chrono::steady_clock::time_point) << std::endl;
 //    pimii::Tokenizer tokenizer("((3 + 4) * -1) abs , §komisch 'Te\\'st' - #test 1_00_000_0");
 //    pimii::Token token = tokenizer.consume();
 //    while(!token.isEOI()) {
@@ -16,9 +24,19 @@ int main() {
 //    }
 //
     pimii::System sys;
-    pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4000 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.", pimii::Nil::NIL);
+    std::ifstream ifs("source.st");
+    std::string content;
+    content.assign(std::istreambuf_iterator<char>(ifs),
+                   std::istreambuf_iterator<char>());
+
+    pimii::SourceFileParser parser(sys, content);
+    parser.compile();
+
+
+//    pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4000 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.",
+ //                            pimii::Nil::NIL);
     //pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
-    pimii::ObjectPointer method = compiler.compile(sys);
+//    pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
 //
 //    std::vector<pimii::ObjectPointer> literals;
@@ -36,29 +54,29 @@ int main() {
 //    pimii::ObjectPointer method = methods.createMethod(0, literals, ops);
 //
 //
-    pimii::ObjectPointer context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
-                                                                pimii::Nil::NIL);
-    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer(0);
-    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer(0);
-    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
-
-    interpreter.newActiveContext(context);
-    interpreter.run();
-
-    sys.getMemoryManager().gc();
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
-                                                                     pimii::Nil::NIL);
-    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer(0);
-    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer(0);
-    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
-
-    interpreter.newActiveContext(context);
-    interpreter.run();
-
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "us"
-              << std::endl;
+//    pimii::ObjectPointer context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+//                                                                     pimii::Nil::NIL);
+//    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+//    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+//    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
+//
+//    interpreter.newActiveContext(context);
+//    interpreter.run();
+//
+//    sys.getMemoryManager().gc();
+//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+//    context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+//                                                pimii::Nil::NIL);
+//    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+//    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+//    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
+//
+//    interpreter.newActiveContext(context);
+//    interpreter.run();
+//
+//    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+//    std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "us"
+//              << std::endl;
 
     return 0;
 }

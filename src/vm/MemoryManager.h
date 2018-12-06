@@ -55,6 +55,7 @@ namespace pimii {
         std::shared_ptr<Segment> currentSegment;
         Word allocated;
         Word used;
+        Word counter;
 
         static const inline Word SEGMENT_SIZE = 400000;
 
@@ -62,18 +63,23 @@ namespace pimii {
             currentSegment = std::make_shared<Segment>(SEGMENT_SIZE, currentSegment);
             allocated += SEGMENT_SIZE;
             used += numberOfWords;
+            counter++;
 
             return currentSegment->alloc(numberOfWords);
         }
 
     public:
-        Allocator() : currentSegment(nullptr), allocated(0), used(0) {}
+        Allocator() : currentSegment(nullptr), allocated(0), used(0), counter(0) {}
 
-        Word allocatedWords() {
+        Word objectCount() const {
+            return counter;
+        }
+
+        Word allocatedWords() const {
             return allocated;
         }
 
-        Word usedWords() {
+        Word usedWords() const {
             return used;
         }
 
@@ -82,6 +88,7 @@ namespace pimii {
                 Word *result = currentSegment->alloc(numberOfWords);
                 if (result != nullptr) {
                     used += numberOfWords;
+                    counter++;
                     return result;
                 }
             }
@@ -99,6 +106,9 @@ namespace pimii {
     class GarbageCollector {
         std::deque<ObjectPointer> work;
         MemoryManager &mm;
+
+        bool collectBuffers;
+
         static const inline char STATE_ORIGINAL = 0;
         static const inline char STATE_PARTIALLY_MOVED = 1;
         static const inline char STATE_FULLY_MOVED = 2;
@@ -114,7 +124,7 @@ namespace pimii {
         ObjectPointer translateField(ObjectPointer field);
 
     public:
-        GarbageCollector(MemoryManager &mm) : mm(mm) {}
+        GarbageCollector(MemoryManager &mm, bool collectBuffers) : mm(mm), collectBuffers(collectBuffers) {}
 
         void run();
     };
@@ -124,10 +134,10 @@ namespace pimii {
         std::list<ObjectPointer> rootObjects;
         std::unique_ptr<Allocator> activeObjects;
         std::unique_ptr<Allocator> buffers;
-
         static const inline Word LARGE_OBJECT_SIZE = 100000;
 
     public:
+        std::vector<ObjectPointer> seen;
         MemoryManager() : rootAllocator(std::make_unique<Allocator>()),
                           activeObjects(std::make_unique<Allocator>()),
                           buffers(std::make_unique<Allocator>()) {};
@@ -147,7 +157,9 @@ namespace pimii {
                 throw std::bad_alloc();
             }
 
-            return ObjectPointer(buffer, type, numberOfFields);
+            ObjectPointer result = ObjectPointer(buffer, type, numberOfFields);
+            seen.push_back(result);
+            return result;
         }
 
         ObjectPointer makeBuffer(Offset numberOfBytes, ObjectPointer type);

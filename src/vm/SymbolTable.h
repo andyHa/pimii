@@ -19,8 +19,6 @@ namespace pimii {
         static const Offset FIELD_TABLE;
         static const Offset SIZE;
 
-        ObjectPointer tryInsert(Offset index, ObjectPointer table, const std::string_view &name);
-
         void grow(ObjectPointer table);
 
         void reInsert(ObjectPointer table, ObjectPointer symbol);

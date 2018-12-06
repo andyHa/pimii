@@ -17,6 +17,6 @@ add_executable(pimii main.cpp
         src/vm/Primitives.cpp
         src/compiler/Compiler.cpp
         src/compiler/AST.cpp
-        src/compiler/Tokenizer.cpp)
+        src/compiler/Tokenizer.cpp src/vm/Looping.h src/common/types.h src/compiler/SourceFileParser.cpp src/compiler/SourceFileParser.h)
 
 add_executable(pimii-tests src/tests/tests-main.cpp src/tests/ObjectPointerSpec.cpp src/vm/MemoryManager.cpp)

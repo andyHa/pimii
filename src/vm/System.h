@@ -42,6 +42,9 @@ namespace pimii {
 
         ObjectPointer getType(ObjectPointer obj);
 
+        bool is(ObjectPointer instance, ObjectPointer type);
+
+
         std::string info(ObjectPointer obj);
 
         void debug(ObjectPointer obj);

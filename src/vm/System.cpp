@@ -11,23 +11,23 @@ namespace pimii {
 
     System::System()
             : mm(), symbols(mm), dictionary(mm), types(mm, symbols, dictionary),
+              specialSelectors(mm.makeRootObject(NUMBER_OF_SPECIAL_SELECTORS, types.arrayType)),
               trueValue(mm.makeRootObject(0, Nil::NIL)),
-              falseValue(mm.makeRootObject(0, Nil::NIL)),
-              specialSelectors(mm.makeRootObject(NUMBER_OF_SPECIAL_SELECTORS, types.arrayType)) {
+              falseValue(mm.makeRootObject(0, Nil::NIL)) {
 
-        ObjectPointer symbolTableType = types.makeType(types.objectType, "SymbolTable", 0);
+        ObjectPointer symbolTableType = types.makeType(types.objectType, "SymbolTable", 2, TypeSystem::TYPE_SIZE);
         symbols.installTypes(symbolTableType, types.arrayType, types.symbolType);
 
-        ObjectPointer systemDictionaryType = types.makeType(types.objectType, "SystemDictionary", 0);
+        ObjectPointer systemDictionaryType = types.makeType(types.objectType, "SystemDictionary", 2, TypeSystem::TYPE_SIZE);
         dictionary.installTypes(systemDictionaryType, types.arrayType, types.associationType);
 
         // Setup booleans
-        ObjectPointer booleanType = types.makeType(types.objectType, "Boolean", 0);
-        ObjectPointer trueType = types.makeType(booleanType, "True", 0);
-        const_cast<ObjectPointer *>(&trueValue)->type(trueType);
+        ObjectPointer booleanType = types.makeType(types.objectType, "Boolean", 0, TypeSystem::TYPE_SIZE);
+        ObjectPointer trueType = types.makeType(booleanType, "True", 0, TypeSystem::TYPE_SIZE);
+        const_cast<ObjectPointer*>(&trueValue)->type(trueType);
         dictionary.atPut(symbols.lookup("true"), trueValue);
-        ObjectPointer falseType = types.makeType(booleanType, "False", 0);
-        const_cast<ObjectPointer *>(&falseValue)->type(falseType);
+        ObjectPointer falseType = types.makeType(booleanType, "False", 0, TypeSystem::TYPE_SIZE);
+        const_cast<ObjectPointer*>(&falseValue)->type(falseType);
         dictionary.atPut(symbols.lookup("false"), falseValue);
 
         dictionary.atPut(symbols.lookup("nil"), Nil::NIL);
@@ -90,19 +90,19 @@ namespace pimii {
         //TODO float;
     }
 
-    MemoryManager &System::getMemoryManager() {
+    MemoryManager& System::getMemoryManager() {
         return mm;
     }
 
-    TypeSystem &System::getTypeSystem() {
+    TypeSystem& System::getTypeSystem() {
         return types;
     }
 
-    SymbolTable &System::getSymbolTable() {
+    SymbolTable& System::getSymbolTable() {
         return symbols;
     }
 
-    SystemDictionary &System::getSystemDictionary() {
+    SystemDictionary& System::getSystemDictionary() {
         return dictionary;
     }
 
@@ -114,7 +114,7 @@ namespace pimii {
         return ObjectPointer(specialSelectors);
     }
 
-    int System::getSpecialSelectorIndex(const std::string &name) {
+    int System::getSpecialSelectorIndex(const std::string& name) {
         ObjectPointer symbol = symbols.lookup(name);
         for (Offset index = 0; index < NUMBER_OF_SPECIAL_SELECTORS; index++) {
             if (symbol == specialSelectors[index]) {
@@ -163,7 +163,7 @@ namespace pimii {
                 debugCompiledMethod(obj);
                 return;
             }
-        //    std::cout << obj.type()[TypeSystem::TYPE_FIELD_NAME].stringView() << std::endl;
+            //    std::cout << obj.type()[TypeSystem::TYPE_FIELD_NAME].stringView() << std::endl;
             std::cout << "---------------" << std::endl;
             for (auto i = 0; i < obj.size(); i++) {
                 if (obj == Nil::NIL) {
@@ -196,5 +196,17 @@ namespace pimii {
 //        }
 //        std::cout << "---------------" << std::endl << std::endl;
 
+    }
+
+    bool System::is(ObjectPointer instance, ObjectPointer type) {
+        if (type.type() != types.metaClassType) {
+            //   return false;
+        }
+        ObjectPointer instanceType = getType(instance);
+        while (instanceType != Nil::NIL && instanceType != type) {
+            instanceType = instanceType[TypeSystem::TYPE_FIELD_SUPERTYPE];
+        }
+
+        return instanceType == type;
     }
 }

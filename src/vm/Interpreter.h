@@ -141,6 +141,8 @@ namespace pimii {
 
         ObjectPointer findMethod(ObjectPointer type, ObjectPointer selector);
 
+        ObjectPointer findMethodInType(ObjectPointer type, ObjectPointer selector);
+
         CompiledMethodType getMethodType(ObjectPointer method, Offset &offset);
 
         bool executePrimitive(Offset index, Offset numberOfArguments);
@@ -148,6 +150,7 @@ namespace pimii {
         void handleJump(uint8_t code, uint8_t index);
 
         void performBlockCopy(uint8_t index);
+
     };
 
 }

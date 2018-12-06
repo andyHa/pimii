@@ -12,13 +12,11 @@
 namespace pimii {
 
     class Compiler {
-        std::string input;
+        Tokenizer& tokenizer;
+        std::vector<Error>& errors;
         ObjectPointer type;
-        std::vector<Error> errors;
-        Tokenizer tokenizer;
-        std::string selector;
 
-        void parseSelector(EmitterContext &ctx);
+        void parseSelector(EmitterContext& ctx);
 
         std::unique_ptr<Statement> statement();
 
@@ -37,15 +35,18 @@ namespace pimii {
         std::unique_ptr<Expression> continuation();
 
     public:
-        explicit Compiler(std::string source, ObjectPointer type) : input(std::move(source)), errors(), tokenizer(input, errors) {}
+        explicit Compiler(Tokenizer& tokenizer, ObjectPointer type) : tokenizer(tokenizer), errors(errors),
+                                                                      type(type) {}
 
-        ObjectPointer compile(System &system);
+        ObjectPointer compile(System& system);
 
-        const std::vector<Error> &getErrors() const;
+        void compileAndAdd(System& system);
 
-        void parseTemporaries(EmitterContext &ctx);
+        void parseTemporaries(EmitterContext& ctx);
 
         std::unique_ptr<Expression> parseBlock();
+
+        std::string selector;
     };
 
 }

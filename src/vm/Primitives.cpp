@@ -82,7 +82,7 @@ namespace pimii {
         SmallInteger self = interpreter.pop().smallInt();
         //TODO limits
 
-        interpreter.push(ObjectPointer(self + arg));
+        interpreter.push(ObjectPointer::forSmallInt(self + arg));
         return true;
     }
 
@@ -95,7 +95,7 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 //TODO limits
-        interpreter.push(ObjectPointer(self - arg));
+        interpreter.push(ObjectPointer::forSmallInt(self - arg));
         return true;
     }
 
@@ -108,7 +108,7 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 //TODO limits
-        interpreter.push(ObjectPointer(self * arg));
+        interpreter.push(ObjectPointer::forSmallInt(self * arg));
         return true;
     }
 
@@ -121,7 +121,7 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 //TODO limits
-        interpreter.push(ObjectPointer(self / arg));
+        interpreter.push(ObjectPointer::forSmallInt(self / arg));
         return true;
     }
 
@@ -134,7 +134,7 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 //TODO limits
-        interpreter.push(ObjectPointer(self % arg));
+        interpreter.push(ObjectPointer::forSmallInt(self % arg));
         return true;
     }
 
@@ -173,14 +173,14 @@ namespace pimii {
 
         ObjectPointer self = interpreter.pop();
         if (self.isSmallInt()) {
-            interpreter.push(ObjectPointer(0));
+            interpreter.push(ObjectPointer::forSmallInt(0));
             return true;
         } else if (self.isObject()) {
-            interpreter.push(ObjectPointer(self.size() -
+            interpreter.push(ObjectPointer::forSmallInt(self.size() -
                                            self.type()[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt()));
             return true;
         } else if (self.isBuffer()) {
-            interpreter.push(ObjectPointer(self.byteSize()));
+            interpreter.push(ObjectPointer::forSmallInt(self.byteSize()));
             return true;
         }
 

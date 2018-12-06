@@ -18,7 +18,7 @@ namespace pimii {
                     mm.makeObject(8, types.arrayType));
             type[TypeSystem::TYPE_FIELD_METHODS] = ObjectPointer(
                     mm.makeObject(8, types.arrayType));
-            type[TypeSystem::TYPE_FIELD_TALLY] = ObjectPointer(0);
+            type[TypeSystem::TYPE_FIELD_TALLY] = 0;
         }
 
 
@@ -67,7 +67,7 @@ namespace pimii {
                 mm.makeObject(selectors.size() + 8, types.arrayType);
         type[TypeSystem::TYPE_FIELD_METHODS] =
                 mm.makeObject(selectors.size() + 8, types.arrayType);
-
+        type[TypeSystem::TYPE_FIELD_TALLY] = 0;
         for (Offset i = 0; i < selectors.size(); i++) {
             if (selectors[i] != Nil::NIL) {
                 addMethod(type, selectors[i], methods[i]);
@@ -85,7 +85,7 @@ namespace pimii {
             method[literalIndex++] = literal;
         }
         auto bytes = mm.makeBuffer((Offset) byteCodes.size(), types.byteArrayType);
-        method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = ObjectPointer(
+        method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = ObjectPointer::forSmallInt(
                 (numberOfTemporaries << 2) | CompiledMethodType::BYTECODES);
         method[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = bytes;
         bytes.loadFrom(byteCodes.data(), byteCodes.size());
