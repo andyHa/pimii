@@ -21,7 +21,9 @@ namespace pimii {
             byteArrayType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
             methodContextType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
             blockContextType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
-            compiledMethodType(mm.makeRootObject(TYPE_SIZE + 1, Nil::NIL)) {
+            compiledMethodType(mm.makeRootObject(TYPE_SIZE + 1, Nil::NIL)),
+            linkType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+            processType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)) {
 
         // Create "MetaClass class"
         auto metaClassClassType = ObjectPointer(mm.makeObject(TYPE_SIZE, Nil::NIL));
@@ -64,7 +66,7 @@ namespace pimii {
         // Create "Nil"
         completeType(nilType, objectType, "Nil", 0);
 
-        // Create "Number" and "SmallInt"
+        // Create "SmallInt"
         completeType(smallIntType, objectType, "SmallInteger", 0);
 
         // Create "Symbol"
@@ -86,6 +88,12 @@ namespace pimii {
         // Create "Array"
         completeType(arrayType, objectType, "Array", 0);
         completeType(byteArrayType, objectType, "ByteArray", 0);
+
+        // Create "Link"
+        completeType(linkType, objectType, "Link", 2);
+
+        // Create "Process"
+        completeType(processType, objectType, "Process", 1);
     }
 
     ObjectPointer TypeSystem::makeType(ObjectPointer parent, const std::string& name, Offset effectiveFixedFields,

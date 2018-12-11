@@ -9,12 +9,6 @@
 
 namespace pimii {
 
-    enum CompiledMethodType : Offset {
-        BYTECODES = 0b00,
-        PRIMITIVE = 0b01,
-        RETURN_FIELD = 0b10,
-        POP_AND_STORE_FIELD = 0b11
-    };
 
     class Interpreter {
         System &system;
@@ -27,7 +21,9 @@ namespace pimii {
         Offset maxIP;
         Offset temporaryCount;
         ObjectPointer receiver;
+
     public:
+        bool contextSwitchExpected;
 
         static const Offset COMPILED_METHOD_SIZE;
         static const Offset COMPILED_METHOD_FIELD_HEADER;
@@ -93,7 +89,7 @@ namespace pimii {
 
         void newActiveContext(ObjectPointer context);
 
-        void run();
+        void run(ObjectPointer rootContext);
 
         uint8_t fetchInstruction();
 
@@ -132,7 +128,14 @@ namespace pimii {
         Offset getStackPointer();
 
         Offset getStackBasePointer();
+
+        ObjectPointer popFront(ObjectPointer list, Offset first, Offset last);
+        void pushFront(ObjectPointer value, ObjectPointer list, Offset first, Offset last);
+        void pushBack(ObjectPointer value, ObjectPointer list, Offset first, Offset last);
+        void signalSemaphore(ObjectPointer semaphore);
+
     private:
+        ObjectPointer rootProcess;
         void dispatchOpCode(uint8_t opCode);
 
         void storeContextRegisters();
@@ -143,13 +146,13 @@ namespace pimii {
 
         ObjectPointer findMethodInType(ObjectPointer type, ObjectPointer selector);
 
-        CompiledMethodType getMethodType(ObjectPointer method, Offset &offset);
-
         bool executePrimitive(Offset index, Offset numberOfArguments);
 
         void handleJump(uint8_t code, uint8_t index);
 
         void performBlockCopy(uint8_t index);
+
+
 
     };
 

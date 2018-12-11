@@ -11,7 +11,7 @@
 namespace pimii {
 
     ObjectPointer MemoryManager::makeRootObject(Offset numberOfFields, ObjectPointer type) {
-        auto *buffer = rootAllocator->alloc(numberOfFields + 2);
+        auto* buffer = rootAllocator->alloc(numberOfFields + 2);
         if (buffer == nullptr) {
             //TODO heap overflow
             throw std::bad_alloc();
@@ -30,7 +30,7 @@ namespace pimii {
             numberOfWords++;
         }
 
-        auto *buffer = buffers->alloc(numberOfWords + 2);
+        auto* buffer = buffers->alloc(numberOfWords + 2);
         if (buffer == nullptr) {
             //TODO heap overflow
             throw std::bad_alloc();
@@ -99,9 +99,9 @@ namespace pimii {
             std::cout << "Problem";
         }
 
-        if (std::find(mm.seen.begin(), mm.seen.end(), obj) == mm.seen.end()) {
-            ;
-            std::cout << obj.hash() << " " << obj.size() << " " << obj.type()[TypeSystem::TYPE_FIELD_NAME].stringView() << std::endl;
+        if (std::find(mm.seen.begin(), mm.seen.end(), obj) == mm.seen.end()) { ;
+            std::cout << obj.hash() << " " << obj.size() << " " << obj.type()[TypeSystem::TYPE_FIELD_NAME].stringView()
+                      << std::endl;
         }
 
 
@@ -127,7 +127,7 @@ namespace pimii {
         }
 
         ObjectPointer copy = mm.makeBuffer(buffer.byteSize(), translateField(buffer.type()));
-        buffer.transferBytesTo(copy, buffer.byteSize());
+        buffer.transferBytesTo(0, copy, 0, buffer.byteSize());
         copy.gcInfo(STATE_FULLY_MOVED);
 
         buffer.gcSuccessor(copy);

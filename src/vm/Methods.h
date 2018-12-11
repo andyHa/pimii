@@ -12,28 +12,84 @@
 
 namespace pimii {
 
+
+    enum CompiledMethodType : SmallInteger {
+        MT_BYTECODES = 0b00,
+        MT_PRIMITIVE = 0b01,
+        MT_RETURN_FIELD = 0b10,
+        MT_POP_AND_STORE_FIELD = 0b11
+    };
+
+    class MethodHeader {
+        SmallInteger header;
+
+        static constexpr SmallInteger LARGE_CONTEXT_FLAG_BIT = 0x40000;
+
+    public:
+        static SmallInteger forByteCodes(Offset numTemporaries, bool largeContextFlag) {
+            if (largeContextFlag) {
+                return LARGE_CONTEXT_FLAG_BIT | ((numTemporaries & 0xFF) << 2) | MT_BYTECODES;
+            } else {
+                return ((numTemporaries & 0xFF) << 2) | MT_BYTECODES;
+            }
+        }
+
+        static SmallInteger forPrimitive(Offset primitiveIndex, Offset numTemporaries, bool largeContextFlag) {
+            if (largeContextFlag) {
+                return LARGE_CONTEXT_FLAG_BIT | ((primitiveIndex & 0xFF) << 10) | ((numTemporaries & 0xFF) << 2) |
+                       MT_PRIMITIVE;
+            } else {
+                return ((primitiveIndex & 0xFF) << 10) | ((numTemporaries & 0xFF) << 2) | MT_PRIMITIVE;
+            }
+        }
+
+        MethodHeader(SmallInteger header) : header(header) {}
+
+        MethodHeader(MethodHeader& header) = default;
+
+        MethodHeader& operator=(MethodHeader& header) = default;
+
+        CompiledMethodType methodType() {
+            return static_cast<CompiledMethodType>(header & 0b11);
+        }
+
+        Offset temporaries() {
+            return static_cast<Offset>((header >> 2) & 0xFF);
+        }
+
+        Offset primitiveIndex() {
+            return static_cast<Offset>((header >> 10) & 0xFF);
+        }
+
+        Offset fieldIndex() {
+            return static_cast<Offset>((header >> 2) & 0xFF);
+        }
+
+        bool largeContextFlag() {
+            return (header & LARGE_CONTEXT_FLAG_BIT) == LARGE_CONTEXT_FLAG_BIT;
+        }
+
+        SmallInteger value() {
+            return header;
+        }
+    };
+
     class Methods {
 
-        MemoryManager &mm;
-        TypeSystem &types;
-
-        bool tryInsert(ObjectPointer type, Offset index, ObjectPointer selectors,
-                       ObjectPointer methods,
-                       ObjectPointer selector, ObjectPointer method);
+        MemoryManager& mm;
+        TypeSystem& types;
 
         void grow(ObjectPointer type, ObjectPointer selectors, ObjectPointer methods);
 
-        ObjectPointer createHeaderOnlyMethod(SmallInteger headerValue);
-
     public:
-        Methods(MemoryManager &mm, TypeSystem &types);
+        Methods(MemoryManager& mm, TypeSystem& types);
 
         void addMethod(ObjectPointer type, ObjectPointer selector,
                        ObjectPointer compiledMethod);
 
-        ObjectPointer createMethod(Offset numberOfTemporaries,
-                                   const std::vector<ObjectPointer> &literals,
-                                   const std::vector<uint8_t> &byteCodes);
+        ObjectPointer createMethod(MethodHeader header,
+                                   const std::vector<ObjectPointer>& literals,
+                                   const std::vector<uint8_t>& byteCodes);
 
     };
 

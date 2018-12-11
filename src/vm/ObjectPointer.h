@@ -196,8 +196,8 @@ namespace pimii {
             std::memcpy(dest, &buffer()->fields[0], byteLength);
         }
 
-        void transferBytesTo(ObjectPointer dest, Offset byteLength) {
-            std::memcpy(&dest.buffer()->fields[0], &buffer()->fields[0],
+        void transferBytesTo(Offset start,ObjectPointer dest, Offset destStart, Offset byteLength) {
+            std::memcpy(&dest.buffer()->fields[0] + destStart, &buffer()->fields[0] + start,
                         byteLength);
         }
 

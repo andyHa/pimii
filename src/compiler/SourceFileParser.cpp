@@ -136,12 +136,26 @@ namespace pimii {
     void SourceFileParser::parseMethodsSection() {
         tokenizer.consume();
         std::string className = tokenizer.consume().value;
+        handleMethodsSection(className, false);
+    }
 
+    void SourceFileParser::parseClassMethodsSection() {
+        tokenizer.consume();
+        tokenizer.consume();
+        std::string className = tokenizer.consume().value;
+        handleMethodsSection(className, true);
+    }
+
+    void SourceFileParser::handleMethodsSection(const std::string& className, bool classMethod) {
         ObjectPointer classAsSymbol = system.getSymbolTable().lookup(className);
         ObjectPointer type = system.getSystemDictionary().getValue(classAsSymbol);
         if (!system.is(type, system.getTypeSystem().classType)) {
             errors.emplace_back(Error(tokenizer.currentLine(), "Unknown class: " + className));
             return;
+        }
+
+        if (classMethod) {
+            type = type.type();
         }
 
         if (tokenizer.current().type == SEPARATOR) {
@@ -152,17 +166,13 @@ namespace pimii {
                tokenizer.current().value != "Methods:" &&
                (tokenizer.current().value != "Class" || tokenizer.next().value != "Methods:")) {
 
-            Compiler compiler(tokenizer, type);
-            compiler.compileAndAdd(system);
+            Compiler compiler(tokenizer, errors, type);
+            compiler.compileMethodAndAdd(system);
             std::cout << "New Method: " << className << " :: " << compiler.selector << std::endl;
             if (tokenizer.current().type == SEPARATOR) {
                 tokenizer.consume();
             }
         }
-    }
-
-    void SourceFileParser::parseClassMethodsSection() {
-
     }
 
 }

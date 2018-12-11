@@ -8,11 +8,29 @@
 
 namespace pimii {
 
-    ObjectPointer Compiler::compile(System& system) {
-        EmitterContext context(system);
+    ObjectPointer Compiler::compileExpression(System& system) {
+        EmitterContext context(system, type);
+        return compile(system, context);
+    }
 
+    ObjectPointer Compiler::compileMethod(pimii::System& system) {
+        EmitterContext context(system, type);
         parseSelector(context);
+        return compile(system, context);
+    }
+
+    ObjectPointer Compiler::compile(System& system, EmitterContext& context) {
         parseTemporaries(context);
+
+        SmallInteger primitiveIndex = -1;
+        if (tokenizer.current().value == "<" && tokenizer.next().value == "Primitive:") {
+            tokenizer.consume();
+            tokenizer.consume();
+            primitiveIndex = atoi(tokenizer.consume().value.c_str());
+            if (tokenizer.current().value == ">") {
+                tokenizer.consume();
+            }
+        }
 
         while (!tokenizer.current().isEOI() && tokenizer.current().type != SEPARATOR) {
             std::unique_ptr<Statement> stmt = statement();
@@ -22,20 +40,24 @@ namespace pimii {
             } else {
                 Offset lineOrError = tokenizer.currentLine();
                 errors.emplace_back(Error(tokenizer.currentLine(), "Expected a '.' at the end of a statement."));
-                while (tokenizer.current().lineNumber == lineOrError && !tokenizer.current().isEOI()) {
-                    tokenizer.consume();
-                }
+                //  while (tokenizer.current().lineNumber == lineOrError && !tokenizer.current().isEOI()) {
+                //      tokenizer.consume();
+                //  }
             }
         }
 
         context.pushCompound(Interpreter::OP_RETURN, Interpreter::OP_RETURN_STACK_TOP_TO_SENDER_INDEX);
 
         Methods methods(system.getMemoryManager(), system.getTypeSystem());
-        return methods.createMethod(context.getMaxTemporaries(), context.getLiterals(), context.getOpCodes());
+        return methods.createMethod(
+                primitiveIndex >= 0 ? MethodHeader::forPrimitive((Offset) primitiveIndex, context.getMaxTemporaries(),
+                                                                 false)
+                                    : MethodHeader::forByteCodes(context.getMaxTemporaries(), false),
+                context.getLiterals(), context.getOpCodes());
     }
 
-    void Compiler::compileAndAdd(pimii::System& system) {
-        ObjectPointer method = compile(system);
+    void Compiler::compileMethodAndAdd(pimii::System& system) {
+        ObjectPointer method = compileMethod(system);
         Methods methods(system.getMemoryManager(), system.getTypeSystem());
         methods.addMethod(type, system.getSymbolTable().lookup(selector), method);
     }
@@ -105,63 +127,45 @@ namespace pimii {
         if (tokenizer.current().type == CARET) {
             tokenizer.consume();
             if (tokenizer.current().type == NAME) {
-                if (tokenizer.current().value == "self") {
+                if (tokenizer.current().value == "self" && tokenizer.next().type == FULLSTOP) {
                     tokenizer.consume();
                     return std::unique_ptr<Expression>(
                             new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_RECEIVER_INDEX));
                 }
-                if (tokenizer.current().value == "true") {
+                if (tokenizer.current().value == "true" && tokenizer.next().type == FULLSTOP) {
                     tokenizer.consume();
                     return std::unique_ptr<Expression>(
                             new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_TRUE_INDEX));
                 }
-                if (tokenizer.current().value == "false") {
+                if (tokenizer.current().value == "false" && tokenizer.next().type == FULLSTOP) {
                     tokenizer.consume();
                     return std::unique_ptr<Expression>(
                             new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_FALSE_INDEX));
                 }
-                if (tokenizer.current().value == "nil") {
+                if (tokenizer.current().value == "nil" && tokenizer.next().type == FULLSTOP) {
                     tokenizer.consume();
                     return std::unique_ptr<Expression>(
                             new BuiltinConstant(Interpreter::OP_RETURN, Interpreter::OP_RETURN_NIL_INDEX));
                 }
             }
 
-            return std::unique_ptr<Expression>(new Return(expression(true)));
+            return std::unique_ptr<Expression>(new Return(expression()));
         }
 
         if (tokenizer.current().type == NAME && tokenizer.next().type == ASSIGNMENT) {
-            if (isupper(tokenizer.current().value[0])) {
-                //TODO global assignment
-            } else {
-                std::unique_ptr<Assignment> assignment(new Assignment());
-                assignment->name = tokenizer.consume().value;
-                tokenizer.consume();
-                assignment->expression = expression(true);
-                return assignment;
-            }
+            std::unique_ptr<Assignment> assignment(new Assignment());
+            assignment->name = tokenizer.consume().value;
+            tokenizer.consume();
+            assignment->expression = expression();
+            return assignment;
         }
-        return expression(true);
+
+        return expression();
     }
 
-    std::unique_ptr<Expression> Compiler::expression(bool acceptColonSelectors) {
-        std::unique_ptr<Expression> currentReceiver = atom();
-        while (true) {
-            if (tokenizer.current().type == NAME) {
-                currentReceiver = unaryCall(std::move(currentReceiver));
-            }
-
-            if (tokenizer.current().type == OPERATOR) {
-                currentReceiver = binaryCall(std::move(currentReceiver));
-            }
-
-            if (tokenizer.current().type == COLON_NAME && acceptColonSelectors) {
-                currentReceiver = selectorCall(std::move(currentReceiver));
-            }
-
-            return currentReceiver;
-        }
-
+    std::unique_ptr<Expression> Compiler::expression() {
+        std::unique_ptr<Expression> currentReceiver = binaryCall(unaryCall(atom()));
+        return selectorCall(std::move(currentReceiver));
     }
 
     std::unique_ptr<Expression> Compiler::atom() {
@@ -171,7 +175,7 @@ namespace pimii {
 
         if (tokenizer.current().type == L_BRACKET) {
             tokenizer.consume();
-            std::unique_ptr<Expression> result = expression(true);
+            std::unique_ptr<Expression> result = expression();
             if (tokenizer.current().type != R_BRACKET) {
                 errors.emplace_back(Error(tokenizer.currentLine(), ("Unexpected Token '" + tokenizer.current().value +
                                                                     "'. Expected ')'.")));
@@ -276,28 +280,39 @@ namespace pimii {
     }
 
     std::unique_ptr<Expression> Compiler::unaryCall(std::unique_ptr<Expression> receiver) {
-        auto call = new MethodCall();
-        call->receiver = std::move(receiver);
-        call->selector = tokenizer.consume().value;
+        while (tokenizer.current().type == NAME) {
+            auto call = new MethodCall();
+            call->receiver = std::move(receiver);
+            call->selector = tokenizer.consume().value;
+            receiver = std::unique_ptr<Expression>(call);
+        }
 
-        return std::unique_ptr<Expression>(call);
+        return receiver;
     }
 
     std::unique_ptr<Expression> Compiler::binaryCall(std::unique_ptr<Expression> receiver) {
-        auto call = new MethodCall();
-        call->receiver = std::move(receiver);
-        call->selector = tokenizer.consume().value;
-        call->arguments.emplace_back(atom());
+        while (tokenizer.current().type == OPERATOR) {
+            auto call = new MethodCall();
+            call->receiver = std::move(receiver);
+            call->selector = tokenizer.consume().value;
+            call->arguments.emplace_back(unaryCall(atom()));
+            receiver = std::unique_ptr<Expression>(call);
+        }
 
-        return std::unique_ptr<Expression>(call);
+        return receiver;
     }
 
     std::unique_ptr<Expression> Compiler::selectorCall(std::unique_ptr<Expression> receiver) {
+        receiver = binaryCall(std::move(receiver));
+        if (tokenizer.current().type != COLON_NAME) {
+            return receiver;
+        }
+
         auto call = new MethodCall();
         call->receiver = std::move(receiver);
         while (tokenizer.current().type == COLON_NAME) {
             call->selector += tokenizer.consume().value;
-            call->arguments.emplace_back(expression(false));
+            call->arguments.emplace_back(binaryCall(unaryCall(atom())));
         }
         return std::unique_ptr<Expression>(call);
     }
@@ -305,5 +320,6 @@ namespace pimii {
     std::unique_ptr<Expression> Compiler::continuation() {
         return std::unique_ptr<Expression>();
     }
+
 
 }

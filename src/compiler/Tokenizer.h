@@ -57,7 +57,7 @@ namespace pimii {
         Offset lineNumber;
         std::string message;
 
-        Error(Offset lineNumber, std::string message) : lineNumber(lineNumber), message(std::move(message)) {}
+        Error(Offset lineNumber, const std::string& message) : lineNumber(lineNumber), message(message) {}
     };
 
     struct Token {

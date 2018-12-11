@@ -46,6 +46,8 @@ namespace pimii {
         const ObjectPointer methodContextType;
         const ObjectPointer blockContextType;
         const ObjectPointer compiledMethodType;
+        const ObjectPointer linkType;
+        const ObjectPointer processType;
 
         ObjectPointer makeType(ObjectPointer parent, const std::string& name, Offset effectiveFixedFields,
                                Offset effetiveFixedClassFields);

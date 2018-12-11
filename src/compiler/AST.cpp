@@ -9,32 +9,56 @@
 
 namespace pimii {
 
-    void BuiltinConstant::emitByteCodes(EmitterContext &ctx) {
+    void BuiltinConstant::emitByteCodes(EmitterContext& ctx) {
         ctx.pushCompound(opcode, compound);
     }
 
-    void Assignment::emitByteCodes(EmitterContext &ctx) {
+    void Assignment::emitByteCodes(EmitterContext& ctx) {
         expression->emitByteCodes(ctx);
-        //TODO receiver fields
-        int offset = ctx.findTemporaryIndex(name);
-        if (offset < 0) {
-            //TODO error
-            ctx.pushSingle(Interpreter::OP_PUSH);
-        } else {
+
+        Offset offset = ctx.findTemporaryIndex(name);
+        if (offset >= 0) {
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY, offset);
+            return;
         }
+
+        offset = ctx.findFieldIndex(name);
+        if (offset >= 0) {
+            ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_RECEIVER_FIELD, offset);
+            return;
+        }
+
+        if (isupper(name[0])) {
+            auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
+            auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
+            Offset index = ctx.findOrAddLiteral(association);
+            ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_LITERAL_VARIABLE, index);
+        }
+
+        //TODO error
     }
 
-    void PushGlobal::emitByteCodes(EmitterContext &ctx) {
+    void PushGlobal::emitByteCodes(EmitterContext& ctx) {
         auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
         auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
+
         Offset index = ctx.findOrAddLiteral(association);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_VARIABLE, index);
     }
 
-    int EmitterContext::findTemporaryIndex(std::string &name) {
+    Offset EmitterContext::findTemporaryIndex(const std::string& name) {
         for (auto i = (Offset) temporaries.size(); i-- > 0;) {
             if (name == temporaries[i]) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    Offset EmitterContext::findFieldIndex(const std::string& name) {
+        for (auto i = (Offset) fields.size(); i-- > 0;) {
+            if (name == fields[i]) {
                 return i;
             }
         }
@@ -79,12 +103,12 @@ namespace pimii {
         return addLiteral(object);
     }
 
-    void EmitterContext::pushTemporaries(const std::vector<std::string> &temporariesToPush) {
+    void EmitterContext::pushTemporaries(const std::vector<std::string>& temporariesToPush) {
         temporaries.insert(temporaries.end(), temporariesToPush.begin(), temporariesToPush.end());
         maxTemporaries = std::max(maxTemporaries, (Offset) temporaries.size());
     }
 
-    void EmitterContext::pushTemporary(const std::string &temporary) {
+    void EmitterContext::pushTemporary(const std::string& temporary) {
         temporaries.emplace_back(temporary);
         maxTemporaries = std::max(maxTemporaries, (Offset) temporaries.size());
     }
@@ -96,7 +120,7 @@ namespace pimii {
         temporaries.erase(temporaries.end() - numTemporaries, temporaries.end());
     }
 
-    System &EmitterContext::getSystem() {
+    System& EmitterContext::getSystem() {
         return system;
     }
 
@@ -104,11 +128,11 @@ namespace pimii {
         return maxTemporaries;
     }
 
-    const std::vector<ObjectPointer> &EmitterContext::getLiterals() const {
+    const std::vector<ObjectPointer>& EmitterContext::getLiterals() const {
         return literals;
     }
 
-    const std::vector<uint8_t> &EmitterContext::getOpCodes() const {
+    const std::vector<uint8_t>& EmitterContext::getOpCodes() const {
         return opcodes;
     }
 
@@ -133,7 +157,7 @@ namespace pimii {
         return result;
     }
 
-    void Block::emitByteCodes(EmitterContext &ctx) {
+    void Block::emitByteCodes(EmitterContext& ctx) {
         ctx.pushCompound(Interpreter::OP_BLOCK_COPY, temporaries.size());
         Offset jmpAddr = ctx.pushJumpPlaceholder();
         emitInner(ctx);
@@ -141,7 +165,7 @@ namespace pimii {
         ctx.insertJump(jmpAddr, Interpreter::OP_JUMP_ALWAYS, ctx.nextOpCodePosition() - jmpAddr - 2);
     }
 
-    void Block::emitInner(EmitterContext &context) {
+    void Block::emitInner(EmitterContext& context) {
         context.pushTemporaries(temporaries);
 
         for (auto i = 0; i < temporaries.size(); i++) {
@@ -149,27 +173,27 @@ namespace pimii {
                                   (Offset) context.getTemporaries().size() - i - 1);
         }
 
-        for (auto &statement : statements) {
+        for (auto& statement : statements) {
             statement->emitByteCodes(context);
         }
 
         context.popTemporaries(temporaries.size());
     }
 
-    void LiteralSymbol::emitByteCodes(EmitterContext &ctx) {
+    void LiteralSymbol::emitByteCodes(EmitterContext& ctx) {
         ObjectPointer symbol = ctx.getSystem().getSymbolTable().lookup(name);
         Offset index = ctx.findOrAddLiteral(symbol);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
-    void LiteralString::emitByteCodes(EmitterContext &ctx) {
+    void LiteralString::emitByteCodes(EmitterContext& ctx) {
         ObjectPointer string = ctx.getSystem().getMemoryManager().makeString(name,
                                                                              ctx.getSystem().getTypeSystem().stringType);
         Offset index = ctx.addLiteral(string);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
-    void LiteralNumber::emitByteCodes(EmitterContext &ctx) {
+    void LiteralNumber::emitByteCodes(EmitterContext& ctx) {
         if (number == 0) {
             ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_ZERO_INDEX);
             return;
@@ -188,23 +212,29 @@ namespace pimii {
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
-    void PushLocal::emitByteCodes(EmitterContext &ctx) {
+    void PushLocal::emitByteCodes(EmitterContext& ctx) {
         int offset = ctx.findTemporaryIndex(name);
-        if (offset < 0) {
-            //TODO error
-            ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_NIL_INDEX);
-        } else {
+        if (offset >= 0) {
             ctx.pushWithIndex(Interpreter::OP_PUSH_TEMPORARY, offset);
+            return;
         }
+        offset = ctx.findFieldIndex(name);
+        if (offset >= 0) {
+            ctx.pushWithIndex(Interpreter::OP_PUSH_RECEIVER_FIELD, offset);
+            return;
+        }
+        //TODO error
+        ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_NIL_INDEX);
+
     }
 
-    void MethodCall::emitByteCodes(EmitterContext &ctx) {
+    void MethodCall::emitByteCodes(EmitterContext& ctx) {
         if (emitOptimizedControlFlow(ctx)) {
             return;
         }
 
         receiver->emitByteCodes(ctx);
-        for (auto &arg : arguments) {
+        for (auto& arg : arguments) {
             arg->emitByteCodes(ctx);
         }
 
@@ -217,7 +247,7 @@ namespace pimii {
             } else if (arguments.size() == 2) {
                 ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS, specialSelectorIndex);
             } else {
-                ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS, (Offset) arguments.size());
+                ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS, (int) arguments.size());
             }
 
             return;
@@ -237,13 +267,13 @@ namespace pimii {
         }
     }
 
-    bool MethodCall::emitOptimizedControlFlow(EmitterContext &ctx) {
+    bool MethodCall::emitOptimizedControlFlow(EmitterContext& ctx) {
         if (selector == "whileTrue:" && arguments.size() == 1 && receiver->type() == STMT_BLOCK &&
             arguments[0]->type() == STMT_BLOCK) {
             Offset loopAddress = ctx.nextOpCodePosition();
-            reinterpret_cast<Block *>(receiver.get())->emitInner(ctx);
+            reinterpret_cast<Block*>(receiver.get())->emitInner(ctx);
             Offset jumpOnFalseLocation = ctx.pushJumpPlaceholder();
-            reinterpret_cast<Block *>(arguments[0].get())->emitInner(ctx);
+            reinterpret_cast<Block*>(arguments[0].get())->emitInner(ctx);
             Offset delta = ctx.nextOpCodePosition() - loopAddress;
 
             ctx.pushJump(Interpreter::OP_JUMP_BACK, delta + 2);
@@ -254,7 +284,7 @@ namespace pimii {
         return false;
     }
 
-    void Return::emitByteCodes(EmitterContext &ctx) {
+    void Return::emitByteCodes(EmitterContext& ctx) {
         expression->emitByteCodes(ctx);
         ctx.pushCompound(Interpreter::OP_RETURN, Interpreter::OP_RETURN_STACK_TOP_TO_SENDER_INDEX);
     }

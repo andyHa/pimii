@@ -13,20 +13,21 @@ namespace pimii {
             : mm(), symbols(mm), dictionary(mm), types(mm, symbols, dictionary),
               specialSelectors(mm.makeRootObject(NUMBER_OF_SPECIAL_SELECTORS, types.arrayType)),
               trueValue(mm.makeRootObject(0, Nil::NIL)),
-              falseValue(mm.makeRootObject(0, Nil::NIL)) {
+              falseValue(mm.makeRootObject(0, Nil::NIL)),
+              processor(mm.makeRootObject(5, Nil::NIL)) {
 
         ObjectPointer symbolTableType = types.makeType(types.objectType, "SymbolTable", 2, TypeSystem::TYPE_SIZE);
         symbols.installTypes(symbolTableType, types.arrayType, types.symbolType);
 
-        ObjectPointer systemDictionaryType = types.makeType(types.objectType, "SystemDictionary", 2, TypeSystem::TYPE_SIZE);
+        ObjectPointer systemDictionaryType = types.makeType(types.objectType, "SystemDictionary", 2,
+                                                            TypeSystem::TYPE_SIZE);
         dictionary.installTypes(systemDictionaryType, types.arrayType, types.associationType);
 
         // Setup booleans
-        ObjectPointer booleanType = types.makeType(types.objectType, "Boolean", 0, TypeSystem::TYPE_SIZE);
-        ObjectPointer trueType = types.makeType(booleanType, "True", 0, TypeSystem::TYPE_SIZE);
+        ObjectPointer trueType = types.makeType(types.objectType, "True", 0, TypeSystem::TYPE_SIZE);
         const_cast<ObjectPointer*>(&trueValue)->type(trueType);
         dictionary.atPut(symbols.lookup("true"), trueValue);
-        ObjectPointer falseType = types.makeType(booleanType, "False", 0, TypeSystem::TYPE_SIZE);
+        ObjectPointer falseType = types.makeType(types.objectType, "False", 0, TypeSystem::TYPE_SIZE);
         const_cast<ObjectPointer*>(&falseValue)->type(falseType);
         dictionary.atPut(symbols.lookup("false"), falseValue);
 
@@ -72,6 +73,21 @@ namespace pimii {
         specialSelectors[32] = symbols.lookup("ifFalse:");
         specialSelectors[33] = symbols.lookup("ifTrue:otherwise:");
         specialSelectors[34] = symbols.lookup("whileTrue:");
+
+        ObjectPointer processSchedulerType = types.makeType(types.objectType, "ProcessScheduler", 0,
+                                                            TypeSystem::TYPE_SIZE);
+        const_cast<ObjectPointer*>(&processor)->type(processSchedulerType);
+        dictionary.atPut(symbols.lookup("Processor"), processor);
+
+        ObjectPointer irqs = mm.makeObject(10, types.arrayType);
+        processor[System::PROCESSOR_FIELD_IRQ_TABLE] = irqs;
+
+        ObjectPointer semaphoreType = types.makeType(types.objectType, "Semaphore", System::SEMAPHORE_SIZE,
+                                                     TypeSystem::TYPE_SIZE);
+        ObjectPointer timerSemaphore = mm.makeObject(System::SEMAPHORE_SIZE, semaphoreType);
+        irqs[0] = timerSemaphore;
+        timerSemaphore[SEMAPHORE_FIELD_EXCESS_SIGNALS] = 0;
+        dictionary.atPut(symbols.lookup("TimerSemaphore"), timerSemaphore);
     }
 
     ObjectPointer System::getType(ObjectPointer obj) {
@@ -208,5 +224,13 @@ namespace pimii {
         }
 
         return instanceType == type;
+    }
+
+    ObjectPointer System::newInstance(ObjectPointer type, Offset extraFields) {
+        if (getType(getType(type)) != types.metaClassType) {
+            throw std::bad_alloc();
+        }
+
+        return mm.makeObject(type[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + extraFields, type);
     }
 }

@@ -31,6 +31,8 @@ namespace pimii {
 
         void parseClassMethodsSection();
 
+        void handleMethodsSection(const std::string& className, bool classMethod);
+
     public:
         SourceFileParser(System& system, std::string_view source) : system(system), tokenizer(source, errors) {}
 

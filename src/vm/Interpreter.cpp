@@ -7,6 +7,7 @@
 #include "Interpreter.h"
 #include "Primitives.h"
 #include "Looping.h"
+#include "Methods.h"
 
 namespace pimii {
 
@@ -28,17 +29,79 @@ namespace pimii {
     const Offset Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = 6;
 
 
-    Interpreter::Interpreter(System &system) : system(system) {
+    Interpreter::Interpreter(System& system) : system(system), contextSwitchExpected(false) {
         // Install by emulating: "CompiledMethod class specialSelectors: <array>"
         system.getTypeSystem().compiledMethodType[Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = system.getSpecialSelectors();
+
     }
 
-    void Interpreter::run() {
-        while (activeContext != Nil::NIL) {
-            dispatchOpCode(fetchInstruction());
+    void Interpreter::run(ObjectPointer rootContext) {
+        rootProcess = system.getMemoryManager().makeObject(System::PROCESS_SIZE,
+                                                           system.getTypeSystem().processType);
+        rootProcess[System::PROCESS_FIELD_CONTEXT] = rootContext;
+
+        pushBack(rootProcess, system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                 System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        contextSwitchExpected = true;
+
+        while (true) { //TODO for rootProcess done
+            if (!contextSwitchExpected) {
+                if (system.hasIRQ()) {
+                    if (system.isIRQ(IRQ_TIMER)) {
+                        ObjectPointer irqTable = system.processor[System::PROCESSOR_FIELD_IRQ_TABLE];
+                        if (irqTable != Nil::NIL) {
+                            ObjectPointer semaphore = irqTable[0];
+                            if (semaphore != Nil::NIL) {
+                                signalSemaphore(semaphore);
+                            }
+                        }
+                    }
+                    system.clearIRQ();
+                }
+            }
+
+            if (contextSwitchExpected) {
+                ObjectPointer activeProcess = system.processor[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+
+                ObjectPointer nextProcess = popFront(system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                                                     System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+                while (nextProcess == Nil::NIL) {
+                    std::unique_lock<std::mutex> l(system.work_lock);
+                    system.work_available.wait(l);
+                    if (system.hasIRQ()) {
+                        if (system.isIRQ(IRQ_TIMER)) {
+                            ObjectPointer irqTable = system.processor[System::PROCESSOR_FIELD_IRQ_TABLE];
+                            if (irqTable != Nil::NIL) {
+                                ObjectPointer semaphore = irqTable[0];
+                                if (semaphore != Nil::NIL) {
+                                    signalSemaphore(semaphore);
+                                }
+                            }
+                        }
+                        system.clearIRQ();
+                    }
+                    nextProcess = popFront(system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                                           System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+                }
+                if (nextProcess == Nil::NIL) {
+                    return; //TODO idle
+                }
+
+                contextSwitchExpected = false;
+                std::cout << "NEXT PROCESS " << nextProcess.hash() << std::endl;
+
+                if (activeProcess != Nil::NIL) {
+                    activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
+                }
+                system.processor[System::PROCESSOR_FIELD_ACTIVE_PROCESS] = nextProcess;
+
+                newActiveContext(nextProcess[System::PROCESS_FIELD_CONTEXT]);
+            }
+
+            uint8_t opcode = fetchInstruction();
+            dispatchOpCode(opcode);
         }
     }
-
 
     void Interpreter::dispatchOpCode(uint8_t opCode) {
         uint8_t code = opCode & (uint8_t) 0b11111;
@@ -193,7 +256,8 @@ namespace pimii {
             temporaryCount = 0;
         } else {
             homeContext = activeContext;
-            getMethodType(homeContext[CONTEXT_METHOD_FIELD], temporaryCount);
+            temporaryCount = MethodHeader(
+                    homeContext[CONTEXT_METHOD_FIELD][COMPILED_METHOD_FIELD_HEADER].smallInt()).temporaries();
         }
 
         receiver = homeContext[CONTEXT_RECEIVER_FIELD];
@@ -262,6 +326,9 @@ namespace pimii {
 
     ObjectPointer Interpreter::temporary(Offset index) {
         //TODO limits
+        std::cout << "Temporary " << index << " of context " << homeContext.hash()
+                  << " is " << homeContext[CONTEXT_FIXED_SIZE + index].hash() << " Type: "
+                  << homeContext[CONTEXT_FIXED_SIZE + index].type().hash() << std::endl;
         return homeContext[CONTEXT_FIXED_SIZE + index];
     }
 
@@ -277,17 +344,26 @@ namespace pimii {
         newActiveContext(targetContext);
         if (activeContext != Nil::NIL) {
             push(returnValue);
+        } else {
+            contextSwitchExpected = true;
         }
     }
 
     ObjectPointer Interpreter::findMethod(ObjectPointer type, ObjectPointer selector) {
-        while (type != Nil::NIL && type[TypeSystem::TYPE_FIELD_SELECTORS] != Nil::NIL) {
-            ObjectPointer method = findMethodInType(type, selector);
-            if (method != Nil::NIL) {
-                return method;
+        while (type != Nil::NIL) {
+
+            std::cout << "Finding " << selector.stringView() << " in " << type[TypeSystem::TYPE_FIELD_NAME].stringView()
+                      << std::endl;
+
+            if (type[TypeSystem::TYPE_FIELD_SELECTORS] != Nil::NIL) {
+                ObjectPointer method = findMethodInType(type, selector);
+                if (method != Nil::NIL) {
+                    return method;
+                }
             }
             type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
         }
+
 
         return Nil::NIL;
     }
@@ -305,53 +381,52 @@ namespace pimii {
         return Nil::NIL;
     }
 
-    CompiledMethodType Interpreter::getMethodType(ObjectPointer method, Offset &offset) {
-        auto header = (Offset) method[COMPILED_METHOD_FIELD_HEADER].smallInt();
-        offset = header >> 2;
-        return (CompiledMethodType) (header & 0b11);
-    }
-
-
     void Interpreter::send(ObjectPointer selector, Offset numArguments) {
         ObjectPointer newReceiver = stackValue(numArguments);
         ObjectPointer type = system.getType(newReceiver);
+        std::cout << "SENDING " << newReceiver.hash() << " " << selector.stringView() << std::endl;
         ObjectPointer newMethod = findMethod(type, selector);
 
-        Offset index = 0;
-        CompiledMethodType methodType = getMethodType(newMethod, index);
-        if (methodType == CompiledMethodType::PRIMITIVE) {
-            if (executePrimitive(index, numArguments)) {
+        MethodHeader header(newMethod[COMPILED_METHOD_FIELD_HEADER].smallInt());
+
+        if (header.methodType() == CompiledMethodType::MT_PRIMITIVE) {
+            if (executePrimitive(header.primitiveIndex(), numArguments)) {
                 return;
             }
-        } else if (methodType == CompiledMethodType::RETURN_FIELD) {
+        } else if (header.methodType() == CompiledMethodType::MT_RETURN_FIELD) {
             //TODO range check
             pop(); //assert numArguments == 0
-            push(newReceiver[index]);
+            push(newReceiver[header.fieldIndex()]);
             return;
-        } else if (methodType == CompiledMethodType::POP_AND_STORE_FIELD) {
+        } else if (header.methodType() == CompiledMethodType::MT_POP_AND_STORE_FIELD) {
             //TODO range check
             //pop(); //assert numArguments == 1
-            newReceiver[index] = pop();
+            newReceiver[header.fieldIndex()] = pop();
             //push(newReceiver);
             return;
         }
 
-        // TODO check if method is non-nil and has bytecodes
+        std::cout << "Sending " << selector.stringView() << std::endl;
 
-//        //TODO
-//        Context *newContext = (Context *) memory.allocHeap(NIL, Context::FIXED_SIZE + 8);
-//        newContext->atPut(Context::SENDER_FIELD, activeContext);
-//        newContext->atPut(Context::IP_FIELD, 0);
-//        newContext->atPut(Context::SP_FIELD, compiledMethod->getTemporaryCount());
-//        newContext->atPut(Context::METHOD_FIELD, newMethod);
-//
-//        for (size_t i = 0; i < numArguments + 1; i++) {
-//            newContext->atPut(Context::RECEIVER_FIELD + i, stackTop(numArguments - i));
-//        }
-//
-//        pop(numArguments + 1);
-//
-//        newActiveContext(newContext);
+        // TODO check if method is non-nil and has bytecodes
+        ObjectPointer newContext = system.getMemoryManager().makeObject(
+                CONTEXT_FIXED_SIZE + (header.largeContextFlag() ? 16 : 8), system.getTypeSystem().methodContextType);
+        newContext[CONTEXT_SENDER_FIELD] = activeContext;
+        newContext[CONTEXT_IP_FIELD] = 0;
+        newContext[CONTEXT_SP_FIELD] = header.temporaries();
+        newContext[CONTEXT_METHOD_FIELD] = newMethod;
+        newContext[CONTEXT_RECEIVER_FIELD] = newReceiver;
+
+        //TODO ensure proper stack limits
+        //TODO ensure numArguments <= numTeporaries
+        if (numArguments > 0) {
+            activeContext.transferFieldsTo(getStackBasePointer() + (stackPointer - 1 - numArguments), newContext,
+                                           CONTEXT_FIXED_SIZE, numArguments);
+        }
+
+        pop(numArguments + 1);
+
+        newActiveContext(newContext);
     }
 
     ObjectPointer Interpreter::getReceiver() {
@@ -366,7 +441,7 @@ namespace pimii {
         return context[CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].isSmallInt();
     }
 
-    System &Interpreter::getSystem() {
+    System& Interpreter::getSystem() {
         return system;
     }
 
@@ -391,6 +466,7 @@ namespace pimii {
 
         switch (code) {
             case OP_JUMP_BACK:
+                pop();
                 if (delta > instructionPointer) {
                     instructionPointer = 0;
                 } else {
@@ -401,12 +477,14 @@ namespace pimii {
                 instructionPointer = instructionPointer + delta;
                 return;
             case OP_JUMP_ON_TRUE:
-                if (pop() == system.trueValue) {
+                if (stackTop() == system.trueValue) {
+                    pop();
                     instructionPointer = instructionPointer + delta;
                 }
                 return;
             case OP_JUMP_ON_FALSE:
-                if (pop() == system.falseValue) {
+                if (stackTop() == system.falseValue) {
+                    pop();
                     instructionPointer = instructionPointer + delta;
                 }
                 return;
@@ -422,6 +500,63 @@ namespace pimii {
         newContext[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = blockArgumentCount;
         newContext[Interpreter::CONTEXT_HOME_FIELD] = homeContext;
         push(ObjectPointer(newContext));
+    }
+
+    void Interpreter::signalSemaphore(ObjectPointer semaphore) {
+        ObjectPointer firstWaitingProcess = popFront(semaphore, System::SEMAPHORE_FIELD_FIRST_WAITING_PROCESS,
+                                                     System::SEMAPHORE_FIELD_LAST_WAITING_PROCESS);
+
+        if (firstWaitingProcess == Nil::NIL) {
+            semaphore[System::SEMAPHORE_FIELD_EXCESS_SIGNALS] =
+                    semaphore[System::SEMAPHORE_FIELD_EXCESS_SIGNALS].smallInt() + 1;
+            return;
+        }
+
+        pushFront(firstWaitingProcess, system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                  System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        contextSwitchExpected = true;
+    }
+
+    ObjectPointer Interpreter::popFront(ObjectPointer list, Offset first, Offset last) {
+        ObjectPointer next = list[first];
+        if (next == Nil::NIL) {
+            std::cout << "POPF NIL " << first << " " << list.hash() << std::endl;
+            return Nil::NIL;
+        }
+
+        list[first] = next[System::LINK_NEXT];
+        if (list[first] == Nil::NIL) {
+            list[last] = Nil::NIL;
+        }
+
+        std::cout << "POPF " << next[System::LINK_VALUE].hash() << " " << first << " " << list.hash() << std::endl;
+        return next[System::LINK_VALUE];
+    }
+
+    void Interpreter::pushFront(ObjectPointer value, ObjectPointer list, Offset first, Offset last) {
+        std::cout << "PUSHF " << value.hash() << " " << first << " " << list.hash() << std::endl;
+        ObjectPointer link = system.getMemoryManager().makeObject(System::LINK_SIZE, system.getTypeSystem().linkType);
+        link[System::LINK_VALUE] = value;
+        ObjectPointer head = list[first];
+        if (head == Nil::NIL) {
+            list[last] = link;
+        } else {
+            link[System::LINK_NEXT] = head;
+        }
+        list[first] = link;
+    }
+
+    void Interpreter::pushBack(ObjectPointer value, ObjectPointer list, Offset first, Offset last) {
+        std::cout << "PUSHB " << value.hash() << " " << first << " " << list.hash() << std::endl;
+        ObjectPointer link = system.getMemoryManager().makeObject(System::LINK_SIZE, system.getTypeSystem().linkType);
+        link[System::LINK_VALUE] = value;
+        ObjectPointer tail = list[last];
+        if (tail == Nil::NIL) {
+            list[first] = link;
+        } else {
+            tail[System::LINK_NEXT] = link;
+        }
+        list[last] = link;
     }
 
 

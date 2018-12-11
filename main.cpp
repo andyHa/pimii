@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <thread>
 #include <stdlib.h>
 
 #include "src/vm/Interpreter.h"
@@ -33,11 +34,34 @@ int main() {
     parser.compile();
 
 
-//    pimii::Compiler compiler("xx | a b | a := 0. b := 3. [ a < 4000 ] whileTrue: [ b := b + 1. a := a + 1 ]. ^b.",
- //                            pimii::Nil::NIL);
+    std::vector<pimii::Error> errors;
+    pimii::Tokenizer tokenizer(
+            "[ [ true ] whileTrue: [ System log: 'T'. TimerSemaphore wait. ] ] fork.",
+            errors);
+    pimii::Compiler compiler(tokenizer, errors, pimii::Nil::NIL);
+    pimii::ObjectPointer method = compiler.compileExpression(sys);
     //pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
 //    pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
+    pimii::ObjectPointer context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+                                                                     pimii::Nil::NIL);
+    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    //interpreter.newActiveContext(context);
+
+    std::thread([&sys]() {
+        while (true) {
+            sys.irq(pimii::IRQ_TIMER);
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    }).detach();
+
+    interpreter.run(context);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "us"
+              << std::endl;
 //
 //    std::vector<pimii::ObjectPointer> literals;
 //    literals.emplace_back(3);

@@ -4,12 +4,12 @@
 
 #include "Methods.h"
 #include "Interpreter.h"
+#include "Looping.h"
 
 namespace pimii {
 
-    Methods::Methods(MemoryManager &mm, TypeSystem &types) : mm(mm), types(types) {
+    Methods::Methods(MemoryManager& mm, TypeSystem& types) : mm(mm), types(types) {
     }
-
 
     void Methods::addMethod(ObjectPointer type, ObjectPointer selector,
                             ObjectPointer compiledMethod) {
@@ -24,42 +24,28 @@ namespace pimii {
 
         ObjectPointer selectors = type[TypeSystem::TYPE_FIELD_SELECTORS];
         ObjectPointer methods = type[TypeSystem::TYPE_FIELD_METHODS];
-        Offset index = selector.hash() % selectors.size();
-        for (Offset i = index; i < selectors.size(); i++) {
-            if (tryInsert(type, i, selectors, methods, selector, compiledMethod)) {
+
+        for (Looping loop = Looping(selectors.size(), selector.hash()); loop.hasNext(); loop.next()) {
+            if (selectors[loop()] == selector) {
+                methods[loop()] = compiledMethod;
                 return;
             }
-        }
-        for (Offset i = 0; i < index; i++) {
-            if (tryInsert(type, i, selectors, methods, selector, compiledMethod)) {
+
+            if (selectors[loop()] == Nil::NIL) {
+                selectors[loop()] = selector;
+                methods[loop()] = compiledMethod;
+                SmallInteger newSize = type[TypeSystem::TYPE_FIELD_TALLY].smallInt() + 1;
+                if (newSize > selectors.size() * 0.75) {
+                    grow(type, selectors, methods);
+                } else {
+                    type[TypeSystem::TYPE_FIELD_TALLY] = newSize;
+                }
                 return;
             }
         }
 
         //TODO horrible!!
 
-    }
-
-    bool Methods::tryInsert(ObjectPointer type, Offset index, ObjectPointer selectors,
-                            ObjectPointer methods,
-                            ObjectPointer selector, ObjectPointer method) {
-        if (selectors[index] == selector) {
-            methods[index] = method;
-            return true;
-        }
-
-        if (selectors[index] == Nil::NIL) {
-            selectors[index] = selector;
-            methods[index] = method;
-            SmallInteger newSize = type[TypeSystem::TYPE_FIELD_TALLY].smallInt() + 1;
-            type[TypeSystem::TYPE_FIELD_TALLY] = newSize;
-            if (newSize > selectors.size() * 0.75) {
-                grow(type, selectors, methods);
-            }
-            return true;
-        }
-
-        return false;
     }
 
     void Methods::grow(ObjectPointer type, ObjectPointer selectors, ObjectPointer methods) {
@@ -75,28 +61,25 @@ namespace pimii {
         }
     }
 
-    ObjectPointer Methods::createMethod(Offset numberOfTemporaries,
-                                        const std::vector<ObjectPointer> &literals,
-                                        const std::vector<uint8_t> &byteCodes) {
+    ObjectPointer Methods::createMethod(MethodHeader header,
+                                        const std::vector<ObjectPointer>& literals,
+                                        const std::vector<uint8_t>& byteCodes) {
         auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE + (Offset) literals.size(),
-                                     types.compiledMethodType);
+                                    types.compiledMethodType);
+        method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = header.value();
+
         Offset literalIndex = Interpreter::COMPILED_METHOD_FIELD_LITERALS_START;
         for (auto literal : literals) {
             method[literalIndex++] = literal;
         }
-        auto bytes = mm.makeBuffer((Offset) byteCodes.size(), types.byteArrayType);
-        method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = ObjectPointer::forSmallInt(
-                (numberOfTemporaries << 2) | CompiledMethodType::BYTECODES);
-        method[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = bytes;
-        bytes.loadFrom(byteCodes.data(), byteCodes.size());
+
+        if (!byteCodes.empty()) {
+            auto bytes = mm.makeBuffer((Offset) byteCodes.size(), types.byteArrayType);
+            method[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = bytes;
+            bytes.loadFrom(byteCodes.data(), byteCodes.size());
+        }
 
         return method;
-    }
-
-    ObjectPointer Methods::createHeaderOnlyMethod(SmallInteger headerValue) {
-        auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE, types.compiledMethodType);
-        method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = headerValue;
-        return ObjectPointer(method);
     }
 
 

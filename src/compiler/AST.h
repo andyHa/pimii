@@ -12,18 +12,29 @@
 namespace pimii {
 
     class EmitterContext {
-        System &system;
+        System& system;
         std::vector<uint8_t> opcodes;
         std::vector<ObjectPointer> literals;
+        std::vector<std::string> fields;
         std::vector<std::string> temporaries;
         Offset maxTemporaries;
 
     public:
-        explicit EmitterContext(System &system) : system(system), maxTemporaries(0) {}
+        explicit EmitterContext(System& system, ObjectPointer type) : system(system), maxTemporaries(0) {
+            while (type != Nil::NIL) {
+                ObjectPointer fieldNames = type[TypeSystem::TYPE_FIELD_FIELD_NAMES];
+                if (fieldNames != Nil::NIL) {
+                    for (SmallInteger index = fieldNames.size() - 1; index >= 0; index--) {
+                        fields.insert(fields.begin(), std::string(fieldNames[index].stringView()));
+                    }
+                }
+                type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
+            }
+        }
 
         System& getSystem();
 
-        Offset  getMaxTemporaries();
+        Offset getMaxTemporaries();
 
         const std::vector<ObjectPointer>& getLiterals() const;
 
@@ -39,9 +50,9 @@ namespace pimii {
 
         void popTemporaries(size_t numTemporaries);
 
+        Offset findFieldIndex(const std::string& name);
 
-
-        int findTemporaryIndex(std::string &name);
+        Offset findTemporaryIndex(const std::string& name);
 
         Offset findOrAddLiteral(ObjectPointer object);
 
@@ -70,7 +81,8 @@ namespace pimii {
     };
 
     struct Statement {
-        virtual void emitByteCodes(EmitterContext &ctx) = 0;
+        virtual void emitByteCodes(EmitterContext& ctx) = 0;
+
         virtual StatementType type() const { return STMT_OTHER; }
     };
 
@@ -83,7 +95,7 @@ namespace pimii {
         std::unique_ptr<Expression> expression;
 
     public:
-        void emitByteCodes(EmitterContext &ctx) override;
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
 
@@ -91,21 +103,24 @@ namespace pimii {
         std::unique_ptr<Expression> expression;
     public:
         Return(std::unique_ptr<Expression> expression) : expression(std::move(expression)) {}
-        void emitByteCodes(EmitterContext &ctx) override;
+
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
     struct PushGlobal : public Expression {
         std::string name;
     public:
         PushGlobal(std::string name) : name(std::move(name)) {}
-        void emitByteCodes(EmitterContext &ctx) override;
+
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
     struct PushLocal : public Expression {
         std::string name;
     public:
         PushLocal(std::string name) : name(std::move(name)) {}
-        void emitByteCodes(EmitterContext &ctx) override;
+
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
     struct BuiltinConstant : public Expression {
@@ -114,7 +129,7 @@ namespace pimii {
     public:
         BuiltinConstant(uint8_t opcode, uint8_t compound) : opcode(opcode), compound(compound) {}
 
-        void emitByteCodes(EmitterContext &ctx) override;
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
     struct LiteralSymbol : public Expression {
@@ -122,7 +137,7 @@ namespace pimii {
     public:
         LiteralSymbol(std::string name) : name(std::move(name)) {}
 
-        void emitByteCodes(EmitterContext &ctx) override;
+        void emitByteCodes(EmitterContext& ctx) override;
 
     };
 
@@ -131,7 +146,7 @@ namespace pimii {
     public:
         LiteralString(std::string name) : name(std::move(name)) {}
 
-        void emitByteCodes(EmitterContext &ctx) override;
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
     struct LiteralNumber : public Expression {
@@ -139,7 +154,7 @@ namespace pimii {
     public:
         LiteralNumber(SmallInteger number) : number(number) {}
 
-        void emitByteCodes(EmitterContext &ctx) override;
+        void emitByteCodes(EmitterContext& ctx) override;
     };
 
     struct MethodCall : public Expression {
@@ -148,9 +163,10 @@ namespace pimii {
         std::vector<std::unique_ptr<Expression>> arguments;
         bool callSuper;
 
-        void emitByteCodes(EmitterContext &ctx) override;
+        void emitByteCodes(EmitterContext& ctx) override;
+
     private:
-        bool emitOptimizedControlFlow(EmitterContext &ctx);
+        bool emitOptimizedControlFlow(EmitterContext& ctx);
     };
 
 
@@ -163,10 +179,11 @@ namespace pimii {
         std::vector<std::string> temporaries;
         std::vector<std::unique_ptr<Statement>> statements;
 
-        void emitByteCodes(EmitterContext &ctx) override;
-        StatementType  type() const override { return STMT_BLOCK; };
+        void emitByteCodes(EmitterContext& ctx) override;
 
-        void emitInner(EmitterContext &context);
+        StatementType type() const override { return STMT_BLOCK; };
+
+        void emitInner(EmitterContext& context);
     };
 
 

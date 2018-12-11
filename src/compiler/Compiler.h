@@ -16,11 +16,13 @@ namespace pimii {
         std::vector<Error>& errors;
         ObjectPointer type;
 
+        ObjectPointer compile(System& system,EmitterContext& ctx);
+
         void parseSelector(EmitterContext& ctx);
 
         std::unique_ptr<Statement> statement();
 
-        std::unique_ptr<Expression> expression(bool acceptColonSelectors);
+        std::unique_ptr<Expression> expression();
 
         std::unique_ptr<Expression> atom();
 
@@ -35,12 +37,15 @@ namespace pimii {
         std::unique_ptr<Expression> continuation();
 
     public:
-        explicit Compiler(Tokenizer& tokenizer, ObjectPointer type) : tokenizer(tokenizer), errors(errors),
-                                                                      type(type) {}
+        explicit Compiler(Tokenizer& tokenizer, std::vector<Error>& errors, ObjectPointer type) : tokenizer(tokenizer),
+                                                                                                  errors(errors),
+                                                                                                  type(type) {}
 
-        ObjectPointer compile(System& system);
+        ObjectPointer compileExpression(System& system);
 
-        void compileAndAdd(System& system);
+        ObjectPointer compileMethod(System& system);
+
+        void compileMethodAndAdd(System& system);
 
         void parseTemporaries(EmitterContext& ctx);
 
