@@ -7,7 +7,7 @@
 
 namespace pimii {
 
-    bool Primitives::equality(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::equality(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
@@ -17,7 +17,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::lessThan(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::lessThan(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -31,7 +31,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::lessThanOrEqual(pimii::Interpreter& interpreter, pimii::Offset argumentCount) {
+    bool Primitives::lessThanOrEqual(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -45,7 +45,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::greaterThan(pimii::Interpreter& interpreter, pimii::Offset argumentCount) {
+    bool Primitives::greaterThan(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -59,7 +59,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::greaterThanOrEqual(pimii::Interpreter& interpreter, pimii::Offset argumentCount) {
+    bool Primitives::greaterThanOrEqual(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -73,7 +73,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::add(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::add(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -87,7 +87,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::subtract(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::subtract(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -100,7 +100,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::multiply(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::multiply(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -113,7 +113,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::divide(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::divide(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -126,7 +126,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::remainder(pimii::Interpreter& interpreter, pimii::Offset argumentCount) {
+    bool Primitives::remainder(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -139,7 +139,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::basicNew(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::basicNew(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -154,7 +154,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::basicNewWith(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::basicNewWith(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
@@ -170,7 +170,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::clazz(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::clazz(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -180,7 +180,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::id(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::id(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -189,7 +189,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::size(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::size(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -210,7 +210,7 @@ namespace pimii {
         return false;
     }
 
-    bool Primitives::value(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::value(Interpreter& interpreter, SmallInteger argumentCount) {
         ObjectPointer blockContext = interpreter.stackValue(argumentCount);
         // This primitive can only handle BlockContexts
         if (!blockContext.isObject() ||
@@ -239,27 +239,27 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::valueWith(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::valueWith(Interpreter& interpreter, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::perform(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::perform(Interpreter& interpreter, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::performWith(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::performWith(Interpreter& interpreter, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::at(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::at(Interpreter& interpreter, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::atPut(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::atPut(Interpreter& interpreter, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::asSymbol(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::asSymbol(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -274,7 +274,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::asString(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::asString(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -294,7 +294,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::concat(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::concat(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
@@ -326,7 +326,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::sysOut(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::sysOut(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
@@ -343,7 +343,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::fork(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::fork(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -382,7 +382,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::signal(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::signal(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -398,7 +398,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::wait(Interpreter& interpreter, Offset argumentCount) {
+    bool Primitives::wait(Interpreter& interpreter, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }

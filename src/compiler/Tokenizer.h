@@ -54,14 +54,14 @@ namespace pimii {
     };
 
     struct Error {
-        Offset lineNumber;
+        SmallInteger lineNumber;
         std::string message;
 
-        Error(Offset lineNumber, const std::string& message) : lineNumber(lineNumber), message(message) {}
+        Error(SmallInteger lineNumber, const std::string& message) : lineNumber(lineNumber), message(message) {}
     };
 
     struct Token {
-        Offset lineNumber;
+        SmallInteger lineNumber;
         TokenType type;
         std::string value;
 
@@ -69,7 +69,7 @@ namespace pimii {
             return type == EOI;
         }
 
-//        Token(Offset lineNumber, TokenType type, std::string value) : lineNumber(lineNumber), type(type),
+//        Token(SmallInteger lineNumber, TokenType type, std::string value) : lineNumber(lineNumber), type(type),
 //                                                                      value(std::move(value)) {};
 
     };
@@ -77,9 +77,9 @@ namespace pimii {
     class Tokenizer {
         std::string_view input;
         std::deque<Token> bufferedTokens;
-        std::vector<Error> &errors;
         BufferedReader reader;
-        Offset line;
+        SmallInteger line;
+        std::vector<Error> &errors;
 
         Token fetch();
 
@@ -105,7 +105,7 @@ namespace pimii {
 
         Token consume();
 
-        Offset currentLine();
+        SmallInteger currentLine();
 
         //void reportAndConsumeUnexpectedToken
     };

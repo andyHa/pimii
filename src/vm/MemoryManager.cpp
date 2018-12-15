@@ -10,7 +10,7 @@
 
 namespace pimii {
 
-    ObjectPointer MemoryManager::makeRootObject(Offset numberOfFields, ObjectPointer type) {
+    ObjectPointer MemoryManager::makeRootObject(SmallInteger numberOfFields, ObjectPointer type) {
         auto* buffer = rootAllocator->alloc(numberOfFields + 2);
         if (buffer == nullptr) {
             //TODO heap overflow
@@ -23,9 +23,9 @@ namespace pimii {
         return result;
     }
 
-    ObjectPointer MemoryManager::makeBuffer(Offset numberOfBytes, ObjectPointer type) {
-        Offset numberOfWords = numberOfBytes / sizeof(Word);
-        Offset odd = sizeof(Word) - (numberOfBytes % sizeof(Word));
+    ObjectPointer MemoryManager::makeBuffer(SmallInteger numberOfBytes, ObjectPointer type) {
+        SmallInteger numberOfWords = numberOfBytes / sizeof(Word);
+        SmallInteger odd = sizeof(Word) - (numberOfBytes % sizeof(Word));
         if (odd != 0) {
             numberOfWords++;
         }
@@ -41,7 +41,7 @@ namespace pimii {
 
     ObjectPointer MemoryManager::makeString(std::string_view string, ObjectPointer type) {
         //TODO size check
-        auto byteLength = (Offset) (string.size() + 1);
+        auto byteLength = (SmallInteger) (string.size() + 1);
         ObjectPointer obj = makeBuffer(byteLength, type);
 
         obj.loadFrom(string.data(), byteLength);
@@ -141,7 +141,7 @@ namespace pimii {
         }
 
         obj.type(translateField(obj.type()));
-        for (Offset i = 0; i < obj.size(); i++) {
+        for (SmallInteger i = 0; i < obj.size(); i++) {
             obj[i] = translateField(obj[i]);
         }
     }

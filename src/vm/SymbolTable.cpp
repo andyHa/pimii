@@ -8,9 +8,9 @@
 
 namespace pimii {
 
-    const Offset SymbolTable::FIELD_TALLY = 0;
-    const Offset SymbolTable::FIELD_TABLE = 1;
-    const Offset SymbolTable::SIZE = 2;
+    const SmallInteger SymbolTable::FIELD_TALLY = 0;
+    const SmallInteger SymbolTable::FIELD_TABLE = 1;
+    const SmallInteger SymbolTable::SIZE = 2;
 
     SymbolTable::SymbolTable(MemoryManager &mm) : mm(mm), symbolType(Nil::NIL), symbolTable(
             mm.makeRootObject(SIZE, Nil::NIL)) {
@@ -20,7 +20,7 @@ namespace pimii {
 
     ObjectPointer SymbolTable::lookup(const std::string_view &name) {
         std::hash<std::string_view> hasher;
-        auto hash = (Offset) hasher(name);
+        auto hash = (SmallInteger) hasher(name);
         ObjectPointer table = symbolTable[FIELD_TABLE];
 
         for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
@@ -45,7 +45,7 @@ namespace pimii {
     void SymbolTable::grow(ObjectPointer table) {
         ObjectPointer newTable = mm.makeObject(table.size() + 256, table.type());
         symbolTable[FIELD_TABLE] = newTable;
-        for (Offset i = 0; i < table.size(); i++) {
+        for (SmallInteger i = 0; i < table.size(); i++) {
             if (table[i] != Nil::NIL) {
                 reInsert(newTable, table[i]);
             }
@@ -54,7 +54,7 @@ namespace pimii {
     }
 
     void SymbolTable::reInsert(ObjectPointer table, ObjectPointer symbol) {
-        Offset hash = symbol.hashString();
+        SmallInteger hash = symbol.hashString();
 
         for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
             if (table[loop()] == Nil::NIL) {
@@ -73,7 +73,7 @@ namespace pimii {
         ObjectPointer table = symbolTable[FIELD_TABLE];
         table.type(arrayType);
 
-        for (Offset i = 0; i < table.size(); i++) {
+        for (SmallInteger i = 0; i < table.size(); i++) {
             if (table[i] != Nil::NIL) {
                 table[i].type(symbolType);
             }

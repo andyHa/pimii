@@ -19,17 +19,17 @@ namespace pimii {
         SystemDictionary& systemDictionary;
 
         void
-        completeType(ObjectPointer type, ObjectPointer superType, const std::string& name, Offset effectiveFixedFields);
+        completeType(ObjectPointer type, ObjectPointer superType, const std::string& name, SmallInteger effectiveFixedFields);
 
     public:
-        static inline const Offset TYPE_FIELD_SUPERTYPE = 0;
-        static inline const Offset TYPE_FIELD_NAME = 1;
-        static inline const Offset TYPE_FIELD_NUMBER_OF_FIXED_FIELDS = 2;
-        static inline const Offset TYPE_FIELD_FIELD_NAMES = 3;
-        static inline const Offset TYPE_FIELD_TALLY = 4;
-        static inline const Offset TYPE_FIELD_SELECTORS = 5;
-        static inline const Offset TYPE_FIELD_METHODS = 6;
-        static inline const Offset TYPE_SIZE = 7;
+        static inline const SmallInteger TYPE_FIELD_SUPERTYPE = 0;
+        static inline const SmallInteger TYPE_FIELD_NAME = 1;
+        static inline const SmallInteger TYPE_FIELD_NUMBER_OF_FIXED_FIELDS = 2;
+        static inline const SmallInteger TYPE_FIELD_FIELD_NAMES = 3;
+        static inline const SmallInteger TYPE_FIELD_TALLY = 4;
+        static inline const SmallInteger TYPE_FIELD_SELECTORS = 5;
+        static inline const SmallInteger TYPE_FIELD_METHODS = 6;
+        static inline const SmallInteger TYPE_SIZE = 7;
 
         TypeSystem(MemoryManager& mm, SymbolTable& symbols, SystemDictionary& systemDictionary);
 
@@ -49,8 +49,8 @@ namespace pimii {
         const ObjectPointer linkType;
         const ObjectPointer processType;
 
-        ObjectPointer makeType(ObjectPointer parent, const std::string& name, Offset effectiveFixedFields,
-                               Offset effetiveFixedClassFields);
+        ObjectPointer makeType(ObjectPointer parent, const std::string& name, SmallInteger effectiveFixedFields,
+                               SmallInteger effetiveFixedClassFields);
 
     };
 

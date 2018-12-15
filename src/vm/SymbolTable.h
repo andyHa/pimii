@@ -15,9 +15,9 @@ namespace pimii {
         MemoryManager &mm;
         ObjectPointer symbolType;
         ObjectPointer symbolTable;
-        static const Offset FIELD_TALLY;
-        static const Offset FIELD_TABLE;
-        static const Offset SIZE;
+        static const SmallInteger FIELD_TALLY;
+        static const SmallInteger FIELD_TABLE;
+        static const SmallInteger SIZE;
 
         void grow(ObjectPointer table);
 

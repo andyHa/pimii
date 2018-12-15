@@ -6,7 +6,7 @@
 #define PIMII_SOURCEFILEPARSER_H
 
 
-#include "../compiler/tokenizer.h"
+#include "Tokenizer.h"
 #include "../vm/System.h"
 
 namespace pimii {

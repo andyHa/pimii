@@ -12,35 +12,35 @@ namespace pimii {
 
     class Interpreter {
         System &system;
-        Offset instructionPointer;
-        Offset stackPointer;
+        SmallInteger instructionPointer;
+        SmallInteger stackPointer;
         ObjectPointer activeContext;
         ObjectPointer homeContext;
         ObjectPointer method;
         ObjectPointer opCodes;
-        Offset maxIP;
-        Offset temporaryCount;
+        SmallInteger maxIP;
+        SmallInteger temporaryCount;
         ObjectPointer receiver;
 
     public:
         bool contextSwitchExpected;
 
-        static const Offset COMPILED_METHOD_SIZE;
-        static const Offset COMPILED_METHOD_FIELD_HEADER;
-        static const Offset COMPILED_METHOD_FIELD_OPCODES;
-        static const Offset COMPILED_METHOD_FIELD_LITERALS_START;
-        static const Offset COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS;
+        static const SmallInteger COMPILED_METHOD_SIZE;
+        static const SmallInteger COMPILED_METHOD_FIELD_HEADER;
+        static const SmallInteger COMPILED_METHOD_FIELD_OPCODES;
+        static const SmallInteger COMPILED_METHOD_FIELD_LITERALS_START;
+        static const SmallInteger COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS;
 
-        static const Offset CONTEXT_FIXED_SIZE;
-        static const Offset CONTEXT_SENDER_FIELD;
-        static const Offset CONTEXT_CALLER_FIELD;
-        static const Offset CONTEXT_IP_FIELD;
-        static const Offset CONTEXT_SP_FIELD;
-        static const Offset CONTEXT_METHOD_FIELD;
-        static const Offset CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD;
-        static const Offset CONTEXT_INITIAL_IP_FIELD;
-        static const Offset CONTEXT_HOME_FIELD;
-        static const Offset CONTEXT_RECEIVER_FIELD;
+        static const SmallInteger CONTEXT_FIXED_SIZE;
+        static const SmallInteger CONTEXT_SENDER_FIELD;
+        static const SmallInteger CONTEXT_CALLER_FIELD;
+        static const SmallInteger CONTEXT_IP_FIELD;
+        static const SmallInteger CONTEXT_SP_FIELD;
+        static const SmallInteger CONTEXT_METHOD_FIELD;
+        static const SmallInteger CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD;
+        static const SmallInteger CONTEXT_INITIAL_IP_FIELD;
+        static const SmallInteger CONTEXT_HOME_FIELD;
+        static const SmallInteger CONTEXT_RECEIVER_FIELD;
 
         static inline const uint8_t OP_RETURN = 0;
         static inline const uint8_t OP_RETURN_RECEIVER_INDEX = 0;
@@ -99,11 +99,11 @@ namespace pimii {
 
         ObjectPointer stackTop();
 
-        ObjectPointer stackValue(Offset offset);
+        ObjectPointer stackValue(SmallInteger offset);
 
-        void pop(Offset number);
+        void pop(SmallInteger number);
 
-        void unPop(Offset number);
+        void unPop(SmallInteger number);
 
         ObjectPointer sender();
 
@@ -111,27 +111,27 @@ namespace pimii {
 
         ObjectPointer getReceiver();
 
-        ObjectPointer temporary(Offset index);
+        ObjectPointer temporary(SmallInteger index);
 
-        void temporary(Offset index, ObjectPointer value);
+        void temporary(SmallInteger index, ObjectPointer value);
 
-        ObjectPointer literal(Offset index);
+        ObjectPointer literal(SmallInteger index);
 
         void returnValueTo(ObjectPointer returnValue, ObjectPointer targetContext);
 
-        void send(ObjectPointer selector, Offset numArguments);
+        void send(ObjectPointer selector, SmallInteger numArguments);
 
         bool isBlockContext(ObjectPointer context);
 
-        Offset getInstructionPointer();
+        SmallInteger getInstructionPointer();
 
-        Offset getStackPointer();
+        SmallInteger getStackPointer();
 
-        Offset getStackBasePointer();
+        SmallInteger getStackBasePointer();
 
-        ObjectPointer popFront(ObjectPointer list, Offset first, Offset last);
-        void pushFront(ObjectPointer value, ObjectPointer list, Offset first, Offset last);
-        void pushBack(ObjectPointer value, ObjectPointer list, Offset first, Offset last);
+        ObjectPointer popFront(ObjectPointer list, SmallInteger first, SmallInteger last);
+        void pushFront(ObjectPointer value, ObjectPointer list, SmallInteger first, SmallInteger last);
+        void pushBack(ObjectPointer value, ObjectPointer list, SmallInteger first, SmallInteger last);
         void signalSemaphore(ObjectPointer semaphore);
 
     private:
@@ -146,7 +146,7 @@ namespace pimii {
 
         ObjectPointer findMethodInType(ObjectPointer type, ObjectPointer selector);
 
-        bool executePrimitive(Offset index, Offset numberOfArguments);
+        bool executePrimitive(SmallInteger index, SmallInteger numberOfArguments);
 
         void handleJump(uint8_t code, uint8_t index);
 

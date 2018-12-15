@@ -11,22 +11,22 @@
 
 namespace pimii {
 
-    const Offset Interpreter::CONTEXT_FIXED_SIZE = 6;
-    const Offset Interpreter::CONTEXT_SENDER_FIELD = 0;
-    const Offset Interpreter::CONTEXT_CALLER_FIELD = 0;
-    const Offset Interpreter::CONTEXT_IP_FIELD = 1;
-    const Offset Interpreter::CONTEXT_SP_FIELD = 2;
-    const Offset Interpreter::CONTEXT_METHOD_FIELD = 3;
-    const Offset Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD = 3;
-    const Offset Interpreter::CONTEXT_INITIAL_IP_FIELD = 4;
-    const Offset Interpreter::CONTEXT_HOME_FIELD = 5;
-    const Offset Interpreter::CONTEXT_RECEIVER_FIELD = 5;
+    const SmallInteger Interpreter::CONTEXT_FIXED_SIZE = 6;
+    const SmallInteger Interpreter::CONTEXT_SENDER_FIELD = 0;
+    const SmallInteger Interpreter::CONTEXT_CALLER_FIELD = 0;
+    const SmallInteger Interpreter::CONTEXT_IP_FIELD = 1;
+    const SmallInteger Interpreter::CONTEXT_SP_FIELD = 2;
+    const SmallInteger Interpreter::CONTEXT_METHOD_FIELD = 3;
+    const SmallInteger Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD = 3;
+    const SmallInteger Interpreter::CONTEXT_INITIAL_IP_FIELD = 4;
+    const SmallInteger Interpreter::CONTEXT_HOME_FIELD = 5;
+    const SmallInteger Interpreter::CONTEXT_RECEIVER_FIELD = 5;
 
-    const Offset Interpreter::COMPILED_METHOD_SIZE = 2;
-    const Offset Interpreter::COMPILED_METHOD_FIELD_HEADER = 0;
-    const Offset Interpreter::COMPILED_METHOD_FIELD_OPCODES = 1;
-    const Offset Interpreter::COMPILED_METHOD_FIELD_LITERALS_START = 2;
-    const Offset Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = 6;
+    const SmallInteger Interpreter::COMPILED_METHOD_SIZE = 2;
+    const SmallInteger Interpreter::COMPILED_METHOD_FIELD_HEADER = 0;
+    const SmallInteger Interpreter::COMPILED_METHOD_FIELD_OPCODES = 1;
+    const SmallInteger Interpreter::COMPILED_METHOD_FIELD_LITERALS_START = 2;
+    const SmallInteger Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = 6;
 
 
     Interpreter::Interpreter(System& system) : system(system), contextSwitchExpected(false) {
@@ -225,7 +225,7 @@ namespace pimii {
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS:
-                Offset primitiveIndex = fetchInstruction();
+                SmallInteger primitiveIndex = fetchInstruction();
                 if (primitiveIndex > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(primitiveIndex, index)) {
                     send(system.getSpecialSelector(index), index);
                 }
@@ -264,8 +264,8 @@ namespace pimii {
         method = homeContext[CONTEXT_METHOD_FIELD];
         opCodes = method[COMPILED_METHOD_FIELD_OPCODES];
         maxIP = opCodes.byteSize();
-        instructionPointer = (Offset) activeContext[CONTEXT_IP_FIELD].smallInt();
-        stackPointer = (Offset) activeContext[CONTEXT_SP_FIELD].smallInt();
+        instructionPointer = (SmallInteger) activeContext[CONTEXT_IP_FIELD].smallInt();
+        stackPointer = (SmallInteger) activeContext[CONTEXT_SP_FIELD].smallInt();
     }
 
     uint8_t Interpreter::fetchInstruction() {
@@ -294,15 +294,15 @@ namespace pimii {
         return activeContext[getStackBasePointer() + (stackPointer - 1)];
     }
 
-    ObjectPointer Interpreter::stackValue(Offset offset) {
-        Offset effectiveStackPointer = stackPointer - offset;
+    ObjectPointer Interpreter::stackValue(SmallInteger offset) {
+        SmallInteger effectiveStackPointer = stackPointer - offset;
         if (effectiveStackPointer <= 0) {
             return Nil::NIL; //TODO error?
         }
         return activeContext[getStackBasePointer() + (effectiveStackPointer - 1)];
     }
 
-    void Interpreter::pop(Offset number) {
+    void Interpreter::pop(SmallInteger number) {
         if (stackPointer >= number) {
             stackPointer -= number;
         } else {
@@ -311,7 +311,7 @@ namespace pimii {
         }
     }
 
-    void Interpreter::unPop(Offset number) {
+    void Interpreter::unPop(SmallInteger number) {
         //TODO limit1!
         stackPointer += number;
     }
@@ -324,7 +324,7 @@ namespace pimii {
         return activeContext[CONTEXT_SENDER_FIELD];
     }
 
-    ObjectPointer Interpreter::temporary(Offset index) {
+    ObjectPointer Interpreter::temporary(SmallInteger index) {
         //TODO limits
         std::cout << "Temporary " << index << " of context " << homeContext.hash()
                   << " is " << homeContext[CONTEXT_FIXED_SIZE + index].hash() << " Type: "
@@ -332,11 +332,11 @@ namespace pimii {
         return homeContext[CONTEXT_FIXED_SIZE + index];
     }
 
-    void Interpreter::temporary(Offset index, ObjectPointer value) {
+    void Interpreter::temporary(SmallInteger index, ObjectPointer value) {
         homeContext[CONTEXT_FIXED_SIZE + index] = value;
     }
 
-    ObjectPointer Interpreter::literal(Offset index) {
+    ObjectPointer Interpreter::literal(SmallInteger index) {
         return method[COMPILED_METHOD_FIELD_LITERALS_START + index];
     }
 
@@ -381,7 +381,7 @@ namespace pimii {
         return Nil::NIL;
     }
 
-    void Interpreter::send(ObjectPointer selector, Offset numArguments) {
+    void Interpreter::send(ObjectPointer selector, SmallInteger numArguments) {
         ObjectPointer newReceiver = stackValue(numArguments);
         ObjectPointer type = system.getType(newReceiver);
         std::cout << "SENDING " << newReceiver.hash() << " " << selector.stringView() << std::endl;
@@ -433,7 +433,7 @@ namespace pimii {
         return receiver;
     }
 
-    bool Interpreter::executePrimitive(Offset index, Offset numberOfArguments) {
+    bool Interpreter::executePrimitive(SmallInteger index, SmallInteger numberOfArguments) {
         return Primitives::executePrimitive(index, *this, numberOfArguments);
     }
 
@@ -445,7 +445,7 @@ namespace pimii {
         return system;
     }
 
-    Offset Interpreter::getInstructionPointer() {
+    SmallInteger Interpreter::getInstructionPointer() {
         return instructionPointer;
     }
 
@@ -453,11 +453,11 @@ namespace pimii {
         return activeContext;
     }
 
-    Offset Interpreter::getStackPointer() {
+    SmallInteger Interpreter::getStackPointer() {
         return stackPointer;
     }
 
-    Offset Interpreter::getStackBasePointer() {
+    SmallInteger Interpreter::getStackBasePointer() {
         return CONTEXT_FIXED_SIZE + temporaryCount;
     }
 
@@ -517,7 +517,7 @@ namespace pimii {
         contextSwitchExpected = true;
     }
 
-    ObjectPointer Interpreter::popFront(ObjectPointer list, Offset first, Offset last) {
+    ObjectPointer Interpreter::popFront(ObjectPointer list, SmallInteger first, SmallInteger last) {
         ObjectPointer next = list[first];
         if (next == Nil::NIL) {
             std::cout << "POPF NIL " << first << " " << list.hash() << std::endl;
@@ -533,7 +533,7 @@ namespace pimii {
         return next[System::LINK_VALUE];
     }
 
-    void Interpreter::pushFront(ObjectPointer value, ObjectPointer list, Offset first, Offset last) {
+    void Interpreter::pushFront(ObjectPointer value, ObjectPointer list, SmallInteger first, SmallInteger last) {
         std::cout << "PUSHF " << value.hash() << " " << first << " " << list.hash() << std::endl;
         ObjectPointer link = system.getMemoryManager().makeObject(System::LINK_SIZE, system.getTypeSystem().linkType);
         link[System::LINK_VALUE] = value;
@@ -546,7 +546,7 @@ namespace pimii {
         list[first] = link;
     }
 
-    void Interpreter::pushBack(ObjectPointer value, ObjectPointer list, Offset first, Offset last) {
+    void Interpreter::pushBack(ObjectPointer value, ObjectPointer list, SmallInteger first, SmallInteger last) {
         std::cout << "PUSHB " << value.hash() << " " << first << " " << list.hash() << std::endl;
         ObjectPointer link = system.getMemoryManager().makeObject(System::LINK_SIZE, system.getTypeSystem().linkType);
         link[System::LINK_VALUE] = value;

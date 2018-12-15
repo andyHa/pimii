@@ -122,7 +122,7 @@ namespace pimii {
         return dictionary;
     }
 
-    ObjectPointer System::getSpecialSelector(Offset index) {
+    ObjectPointer System::getSpecialSelector(SmallInteger index) {
         return specialSelectors[index];
     }
 
@@ -132,7 +132,7 @@ namespace pimii {
 
     int System::getSpecialSelectorIndex(const std::string& name) {
         ObjectPointer symbol = symbols.lookup(name);
-        for (Offset index = 0; index < NUMBER_OF_SPECIAL_SELECTORS; index++) {
+        for (SmallInteger index = 0; index < NUMBER_OF_SPECIAL_SELECTORS; index++) {
             if (symbol == specialSelectors[index]) {
                 return index;
             }
@@ -226,7 +226,7 @@ namespace pimii {
         return instanceType == type;
     }
 
-    ObjectPointer System::newInstance(ObjectPointer type, Offset extraFields) {
+    ObjectPointer System::newInstance(ObjectPointer type, SmallInteger extraFields) {
         if (getType(getType(type)) != types.metaClassType) {
             throw std::bad_alloc();
         }

@@ -22,12 +22,12 @@ namespace pimii {
         void reInsert(ObjectPointer table, ObjectPointer association);
 
     public:
-        static const Offset DICTIONARY_SIZE;
-        static const Offset DICTIONARY_FIELD_TALLY;
-        static const Offset DICTIONARY_FIELD_TABLE;
-        static const Offset ASSOCIATION_SIZE;
-        static const Offset ASSOCIATION_FIELD_KEY;
-        static const Offset ASSOCIATION_FIELD_VALUE;
+        static const SmallInteger DICTIONARY_SIZE;
+        static const SmallInteger DICTIONARY_FIELD_TALLY;
+        static const SmallInteger DICTIONARY_FIELD_TABLE;
+        static const SmallInteger ASSOCIATION_SIZE;
+        static const SmallInteger ASSOCIATION_FIELD_KEY;
+        static const SmallInteger ASSOCIATION_FIELD_VALUE;
 
         SystemDictionary(MemoryManager &mm);
 

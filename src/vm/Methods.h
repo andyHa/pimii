@@ -26,7 +26,7 @@ namespace pimii {
         static constexpr SmallInteger LARGE_CONTEXT_FLAG_BIT = 0x40000;
 
     public:
-        static SmallInteger forByteCodes(Offset numTemporaries, bool largeContextFlag) {
+        static SmallInteger forByteCodes(SmallInteger numTemporaries, bool largeContextFlag) {
             if (largeContextFlag) {
                 return LARGE_CONTEXT_FLAG_BIT | ((numTemporaries & 0xFF) << 2) | MT_BYTECODES;
             } else {
@@ -34,7 +34,7 @@ namespace pimii {
             }
         }
 
-        static SmallInteger forPrimitive(Offset primitiveIndex, Offset numTemporaries, bool largeContextFlag) {
+        static SmallInteger forPrimitive(SmallInteger primitiveIndex, SmallInteger numTemporaries, bool largeContextFlag) {
             if (largeContextFlag) {
                 return LARGE_CONTEXT_FLAG_BIT | ((primitiveIndex & 0xFF) << 10) | ((numTemporaries & 0xFF) << 2) |
                        MT_PRIMITIVE;
@@ -53,16 +53,16 @@ namespace pimii {
             return static_cast<CompiledMethodType>(header & 0b11);
         }
 
-        Offset temporaries() {
-            return static_cast<Offset>((header >> 2) & 0xFF);
+        SmallInteger temporaries() {
+            return static_cast<SmallInteger>((header >> 2) & 0xFF);
         }
 
-        Offset primitiveIndex() {
-            return static_cast<Offset>((header >> 10) & 0xFF);
+        SmallInteger primitiveIndex() {
+            return static_cast<SmallInteger>((header >> 10) & 0xFF);
         }
 
-        Offset fieldIndex() {
-            return static_cast<Offset>((header >> 2) & 0xFF);
+        SmallInteger fieldIndex() {
+            return static_cast<SmallInteger>((header >> 2) & 0xFF);
         }
 
         bool largeContextFlag() {

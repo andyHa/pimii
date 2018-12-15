@@ -17,7 +17,7 @@ namespace pimii {
         std::vector<ObjectPointer> literals;
         std::vector<std::string> fields;
         std::vector<std::string> temporaries;
-        Offset maxTemporaries;
+        SmallInteger maxTemporaries;
 
     public:
         explicit EmitterContext(System& system, ObjectPointer type) : system(system), maxTemporaries(0) {
@@ -34,7 +34,7 @@ namespace pimii {
 
         System& getSystem();
 
-        Offset getMaxTemporaries();
+        SmallInteger getMaxTemporaries();
 
         const std::vector<ObjectPointer>& getLiterals() const;
 
@@ -50,13 +50,13 @@ namespace pimii {
 
         void popTemporaries(size_t numTemporaries);
 
-        Offset findFieldIndex(const std::string& name);
+        SmallInteger findFieldIndex(const std::string& name);
 
-        Offset findTemporaryIndex(const std::string& name);
+        SmallInteger findTemporaryIndex(const std::string& name);
 
-        Offset findOrAddLiteral(ObjectPointer object);
+        SmallInteger findOrAddLiteral(ObjectPointer object);
 
-        Offset addLiteral(ObjectPointer object);
+        SmallInteger addLiteral(ObjectPointer object);
 
         void pushSingle(uint8_t opcode);
 
@@ -64,13 +64,13 @@ namespace pimii {
 
         void pushWithIndex(uint8_t opcode, int index);
 
-        Offset nextOpCodePosition();
+        SmallInteger nextOpCodePosition();
 
-        Offset pushJumpPlaceholder();
+        SmallInteger pushJumpPlaceholder();
 
-        void pushJump(uint8_t opcode, Offset delta);
+        void pushJump(uint8_t opcode, SmallInteger delta);
 
-        void insertJump(Offset index, uint8_t opcode, Offset delta);
+        void insertJump(SmallInteger index, uint8_t opcode, SmallInteger delta);
 
 
     };
@@ -81,6 +81,7 @@ namespace pimii {
     };
 
     struct Statement {
+        virtual  ~Statement() {};
         virtual void emitByteCodes(EmitterContext& ctx) = 0;
 
         virtual StatementType type() const { return STMT_OTHER; }

@@ -54,7 +54,7 @@ namespace pimii {
         type[TypeSystem::TYPE_FIELD_METHODS] =
                 mm.makeObject(selectors.size() + 8, types.arrayType);
         type[TypeSystem::TYPE_FIELD_TALLY] = 0;
-        for (Offset i = 0; i < selectors.size(); i++) {
+        for (SmallInteger i = 0; i < selectors.size(); i++) {
             if (selectors[i] != Nil::NIL) {
                 addMethod(type, selectors[i], methods[i]);
             }
@@ -64,17 +64,17 @@ namespace pimii {
     ObjectPointer Methods::createMethod(MethodHeader header,
                                         const std::vector<ObjectPointer>& literals,
                                         const std::vector<uint8_t>& byteCodes) {
-        auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE + (Offset) literals.size(),
+        auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE + (SmallInteger) literals.size(),
                                     types.compiledMethodType);
         method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = header.value();
 
-        Offset literalIndex = Interpreter::COMPILED_METHOD_FIELD_LITERALS_START;
+        SmallInteger literalIndex = Interpreter::COMPILED_METHOD_FIELD_LITERALS_START;
         for (auto literal : literals) {
             method[literalIndex++] = literal;
         }
 
         if (!byteCodes.empty()) {
-            auto bytes = mm.makeBuffer((Offset) byteCodes.size(), types.byteArrayType);
+            auto bytes = mm.makeBuffer((SmallInteger) byteCodes.size(), types.byteArrayType);
             method[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = bytes;
             bytes.loadFrom(byteCodes.data(), byteCodes.size());
         }

@@ -24,8 +24,8 @@ namespace pimii {
             char test[10];
         } test;
 
-        Offset numberOfWords = 10 / sizeof(Word);
-        Offset odd = sizeof(Word) - (10 % sizeof(Word));
+        SmallInteger numberOfWords = 10 / sizeof(Word);
+        SmallInteger odd = sizeof(Word) - (10 % sizeof(Word));
         if (odd != 0) {
             numberOfWords++;
         }

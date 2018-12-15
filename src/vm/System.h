@@ -27,25 +27,25 @@ namespace pimii {
         ObjectPointer specialSelectors;
         std::bitset<8> irqs;
 
-        static constexpr Offset NUMBER_OF_SPECIAL_SELECTORS = 35;
+        static constexpr SmallInteger NUMBER_OF_SPECIAL_SELECTORS = 35;
     public:
-        static constexpr Offset PROCESSOR_FIELD_ACTIVE_PROCESS = 0;
-        static constexpr Offset PROCESSOR_FIELD_IRQ_TABLE = 1;
-        static constexpr Offset PROCESSOR_FIELD_FIRST_WAITING_PROCESS = 2;
-        static constexpr Offset PROCESSOR_FIELD_LAST_WAITING_PROCESS = 3;
-        static constexpr Offset PROCESSOR_SIZE = 4;
+        static constexpr SmallInteger PROCESSOR_FIELD_ACTIVE_PROCESS = 0;
+        static constexpr SmallInteger PROCESSOR_FIELD_IRQ_TABLE = 1;
+        static constexpr SmallInteger PROCESSOR_FIELD_FIRST_WAITING_PROCESS = 2;
+        static constexpr SmallInteger PROCESSOR_FIELD_LAST_WAITING_PROCESS = 3;
+        static constexpr SmallInteger PROCESSOR_SIZE = 4;
 
-        static constexpr Offset PROCESS_FIELD_CONTEXT = 0;
-        static constexpr Offset PROCESS_SIZE = 1;
+        static constexpr SmallInteger PROCESS_FIELD_CONTEXT = 0;
+        static constexpr SmallInteger PROCESS_SIZE = 1;
 
-        static constexpr Offset SEMAPHORE_FIELD_EXCESS_SIGNALS = 0;
-        static constexpr Offset SEMAPHORE_FIELD_FIRST_WAITING_PROCESS = 1;
-        static constexpr Offset SEMAPHORE_FIELD_LAST_WAITING_PROCESS = 2;
-        static constexpr Offset SEMAPHORE_SIZE = 3;
+        static constexpr SmallInteger SEMAPHORE_FIELD_EXCESS_SIGNALS = 0;
+        static constexpr SmallInteger SEMAPHORE_FIELD_FIRST_WAITING_PROCESS = 1;
+        static constexpr SmallInteger SEMAPHORE_FIELD_LAST_WAITING_PROCESS = 2;
+        static constexpr SmallInteger SEMAPHORE_SIZE = 3;
 
-        static constexpr Offset LINK_VALUE = 0;
-        static constexpr Offset LINK_NEXT = 1;
-        static constexpr Offset LINK_SIZE = 2;
+        static constexpr SmallInteger LINK_VALUE = 0;
+        static constexpr SmallInteger LINK_NEXT = 1;
+        static constexpr SmallInteger LINK_SIZE = 2;
 
         std::condition_variable work_available;
         std::mutex work_lock;
@@ -60,7 +60,7 @@ namespace pimii {
 
         SystemDictionary &getSystemDictionary();
 
-        ObjectPointer getSpecialSelector(Offset index);
+        ObjectPointer getSpecialSelector(SmallInteger index);
 
         ObjectPointer getSpecialSelectors();
 
@@ -74,7 +74,7 @@ namespace pimii {
 
         bool is(ObjectPointer instance, ObjectPointer type);
 
-        ObjectPointer newInstance(ObjectPointer type, Offset extraFields);
+        ObjectPointer newInstance(ObjectPointer type, SmallInteger extraFields);
 
         void irq(Interrupt interrupt) {
             irqs[interrupt] = true;

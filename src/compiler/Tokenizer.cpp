@@ -273,7 +273,7 @@ namespace pimii {
                ch == '>' || ch == '=' || ch == '?' || ch == '|' || ch == '@' || ch == '!' || ch == ',';
     }
 
-    Offset Tokenizer::currentLine() {
+    SmallInteger Tokenizer::currentLine() {
         return current().lineNumber;
     }
 

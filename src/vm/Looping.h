@@ -10,12 +10,12 @@
 namespace pimii {
 
     class Looping {
-        Offset max;
-        Offset start;
-        Offset index;
+        SmallInteger max;
+        SmallInteger start;
+        SmallInteger index;
         bool wrapped;
     public:
-        Looping( Offset size, Offset initialIndex) : max(size), start(initialIndex % max), index(start),
+        Looping( SmallInteger size, SmallInteger initialIndex) : max(size), start(initialIndex % max), index(start),
                                                     wrapped(false) {};
 
         bool hasNext() {
@@ -30,7 +30,7 @@ namespace pimii {
             }
         }
 
-        Offset operator()() {
+        SmallInteger operator()() {
             return index;
         }
 

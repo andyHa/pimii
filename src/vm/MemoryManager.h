@@ -148,9 +148,9 @@ namespace pimii {
 
         void gc();
 
-        ObjectPointer makeRootObject(Offset numberOfFields, ObjectPointer type);
+        ObjectPointer makeRootObject(SmallInteger numberOfFields, ObjectPointer type);
 
-        inline ObjectPointer makeObject(Offset numberOfFields, ObjectPointer type) {
+        inline ObjectPointer makeObject(SmallInteger numberOfFields, ObjectPointer type) {
             auto *buffer = activeObjects->alloc(numberOfFields + 2);
             if (buffer == nullptr) {
                 //TODO heap overflow
@@ -162,7 +162,7 @@ namespace pimii {
             return result;
         }
 
-        ObjectPointer makeBuffer(Offset numberOfBytes, ObjectPointer type);
+        ObjectPointer makeBuffer(SmallInteger numberOfBytes, ObjectPointer type);
 
         ObjectPointer makeString(std::string_view string, ObjectPointer type);
     };

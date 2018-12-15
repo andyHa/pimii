@@ -38,7 +38,7 @@ namespace pimii {
             if (tokenizer.current().type == FULLSTOP) {
                 tokenizer.consume();
             } else {
-                Offset lineOrError = tokenizer.currentLine();
+//                SmallInteger lineOrError = tokenizer.currentLine();
                 errors.emplace_back(Error(tokenizer.currentLine(), "Expected a '.' at the end of a statement."));
                 //  while (tokenizer.current().lineNumber == lineOrError && !tokenizer.current().isEOI()) {
                 //      tokenizer.consume();
@@ -50,7 +50,7 @@ namespace pimii {
 
         Methods methods(system.getMemoryManager(), system.getTypeSystem());
         return methods.createMethod(
-                primitiveIndex >= 0 ? MethodHeader::forPrimitive((Offset) primitiveIndex, context.getMaxTemporaries(),
+                primitiveIndex >= 0 ? MethodHeader::forPrimitive((SmallInteger) primitiveIndex, context.getMaxTemporaries(),
                                                                  false)
                                     : MethodHeader::forByteCodes(context.getMaxTemporaries(), false),
                 context.getLiterals(), context.getOpCodes());
@@ -68,7 +68,7 @@ namespace pimii {
             if (tokenizer.current().type == NAME) {
                 ctx.pushTemporary(tokenizer.consume().value);
             } else {
-                Offset lineOrError = tokenizer.currentLine();
+                SmallInteger lineOrError = tokenizer.currentLine();
                 errors.emplace_back(Error(tokenizer.currentLine(), ("Unexpected Token '" + tokenizer.current().value +
                                                                     "'. Expected an argument name.")));
                 while (tokenizer.current().lineNumber == lineOrError && !tokenizer.current().isEOI()) {
@@ -90,7 +90,7 @@ namespace pimii {
             if (tokenizer.current().type == NAME) {
                 ctx.pushTemporary(tokenizer.consume().value);
             } else {
-                Offset lineOrError = tokenizer.currentLine();
+                SmallInteger lineOrError = tokenizer.currentLine();
                 errors.emplace_back(Error(tokenizer.currentLine(), ("Unexpected Token '" + tokenizer.current().value +
                                                                     "'. Expected an argument name.")));
                 while (tokenizer.current().lineNumber == lineOrError && !tokenizer.current().isEOI()) {
@@ -112,7 +112,7 @@ namespace pimii {
         }
 
         if (tokenizer.current().type != OPERATOR || tokenizer.current().value != "|") {
-            Offset lineOrError = tokenizer.currentLine();
+            SmallInteger lineOrError = tokenizer.currentLine();
             errors.emplace_back(Error(tokenizer.currentLine(), ("Unexpected Token '" + tokenizer.current().value +
                                                                 "'. Expected '|'.")));
             while (tokenizer.current().lineNumber == lineOrError && !tokenizer.current().isEOI()) {

@@ -26,7 +26,7 @@ namespace pimii {
     }
 
     void SourceFileParser::parseClassDefinition() {
-        Offset lastLine = tokenizer.currentLine();
+        SmallInteger lastLine = tokenizer.currentLine();
         tokenizer.consume();
         std::string className = tokenizer.consume().value;
         std::string superclassName = "Object";
@@ -81,12 +81,12 @@ namespace pimii {
     void SourceFileParser::createNewType(const std::string& className, const std::vector<std::string>& instanceFields,
                                          const std::vector<std::string>& classFields, ObjectPointer superclass,
                                          ObjectPointer nameAsSymbol) {
-        Offset effectiveNumberOfFixedFields =
+        SmallInteger effectiveNumberOfFixedFields =
                 superclass[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
-                (Offset) instanceFields.size();
-        Offset effectiveFixedClassFields =
+                (SmallInteger) instanceFields.size();
+        SmallInteger effectiveFixedClassFields =
                 superclass.type()[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
-                (Offset) classFields.size();
+                (SmallInteger) classFields.size();
         ObjectPointer newClass = system.getTypeSystem().makeType(superclass, className, effectiveNumberOfFixedFields,
                                                                  effectiveFixedClassFields);
         storeFields(newClass, instanceFields);
@@ -126,7 +126,7 @@ namespace pimii {
 
         ObjectPointer fieldArray = system.getMemoryManager().makeObject(fields.size(),
                                                                         system.getTypeSystem().arrayType);
-        for (Offset index = 0; index < fields.size(); index++) {
+        for (SmallInteger index = 0; index < fields.size(); index++) {
             fieldArray[index] = system.getMemoryManager().makeString(fields[index],
                                                                      system.getTypeSystem().stringType);
         }

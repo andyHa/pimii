@@ -7,12 +7,12 @@
 
 namespace pimii {
 
-    const Offset SystemDictionary::DICTIONARY_SIZE = 2;
-    const Offset SystemDictionary::DICTIONARY_FIELD_TALLY = 0;
-    const Offset SystemDictionary::DICTIONARY_FIELD_TABLE = 1;
-    const Offset SystemDictionary::ASSOCIATION_SIZE = 2;
-    const Offset SystemDictionary::ASSOCIATION_FIELD_KEY = 0;
-    const Offset SystemDictionary::ASSOCIATION_FIELD_VALUE = 1;
+    const SmallInteger SystemDictionary::DICTIONARY_SIZE = 2;
+    const SmallInteger SystemDictionary::DICTIONARY_FIELD_TALLY = 0;
+    const SmallInteger SystemDictionary::DICTIONARY_FIELD_TABLE = 1;
+    const SmallInteger SystemDictionary::ASSOCIATION_SIZE = 2;
+    const SmallInteger SystemDictionary::ASSOCIATION_FIELD_KEY = 0;
+    const SmallInteger SystemDictionary::ASSOCIATION_FIELD_VALUE = 1;
 
     SystemDictionary::SystemDictionary(MemoryManager &mm) : mm(mm), associationType(Nil::NIL), dictionary(
             mm.makeRootObject(DICTIONARY_SIZE, Nil::NIL)) {
@@ -57,7 +57,7 @@ namespace pimii {
         ObjectPointer newTable = mm.makeObject(table.size() + 256, table.type());
         dictionary[DICTIONARY_FIELD_TABLE] = newTable;
 
-        for (Offset i = 0; i < table.size(); i++) {
+        for (SmallInteger i = 0; i < table.size(); i++) {
             if (table[i] != Nil::NIL) {
                 reInsert(newTable, table[i]);
             }
@@ -94,7 +94,7 @@ namespace pimii {
         ObjectPointer table = dictionary[DICTIONARY_FIELD_TABLE];
         table.type(arrayType);
 
-        for (Offset i = 0; i < table.size(); i++) {
+        for (SmallInteger i = 0; i < table.size(); i++) {
             if (table[i] != Nil::NIL) {
                 table[i].type(associationType);
             }

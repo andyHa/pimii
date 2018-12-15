@@ -96,8 +96,8 @@ namespace pimii {
         completeType(processType, objectType, "Process", 1);
     }
 
-    ObjectPointer TypeSystem::makeType(ObjectPointer parent, const std::string& name, Offset effectiveFixedFields,
-                                       Offset effetiveFixedClassFields) {
+    ObjectPointer TypeSystem::makeType(ObjectPointer parent, const std::string& name, SmallInteger effectiveFixedFields,
+                                       SmallInteger effetiveFixedClassFields) {
         ObjectPointer metaType = mm.makeObject(TYPE_SIZE, metaClassType);
         ObjectPointer type = mm.makeObject(effetiveFixedClassFields, ObjectPointer(metaType));
         metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
@@ -112,7 +112,7 @@ namespace pimii {
     }
 
     void TypeSystem::completeType(ObjectPointer type, ObjectPointer parent, const std::string& name,
-                                  Offset effectiveFixedFields) {
+                                  SmallInteger effectiveFixedFields) {
         ObjectPointer metaType = mm.makeObject(TYPE_SIZE, metaClassType);
         type.type(metaType);
 

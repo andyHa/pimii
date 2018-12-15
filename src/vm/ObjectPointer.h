@@ -108,13 +108,13 @@ namespace pimii {
             return ObjectPointer(((Word) (floatValue) << 2) | ObjectPointerType::DECIMAL);
         }
 
-        ObjectPointer(const void *object, ObjectPointer type, Offset numberOfFields) noexcept : data(
+        ObjectPointer(const void *object, ObjectPointer type, SmallInteger numberOfFields) noexcept : data(
                 ((Word) object) | OBJECT) {
             unmask()->size = numberOfFields;
             unmask()->type = *reinterpret_cast<Word *>(&type);
         };
 
-        ObjectPointer(const void *object, ObjectPointer type, Offset wordSize, Offset odd) noexcept : data(
+        ObjectPointer(const void *object, ObjectPointer type, SmallInteger wordSize, SmallInteger odd) noexcept : data(
                 ((Word) object) | BUFFER) {
 
             unmask()->size = (Word) wordSize | (Word) ((odd & ODD_MASK) << (usableSizeBytes() * 8));
@@ -176,7 +176,7 @@ namespace pimii {
             return getObjectPointerType() == OBJECT;
         }
 
-        inline ObjectPointer &operator[](Offset index) const {
+        inline ObjectPointer &operator[](SmallInteger index) const {
             return *reinterpret_cast<ObjectPointer *>(&object()->fields[index]);
         }
 
@@ -184,24 +184,24 @@ namespace pimii {
             return getObjectPointerType() == BUFFER;
         }
 
-        inline char fetchByte(Offset index) {
+        inline char fetchByte(SmallInteger index) {
             return *(reinterpret_cast<char *>(&buffer()->fields[0]) + index);
         }
 
-        void loadFrom(const void *src, Offset byteLength) {
+        void loadFrom(const void *src, SmallInteger byteLength) {
             std::memcpy(&(buffer())->fields[0], src, byteLength);
         }
 
-        void storeTo(void *dest, Offset byteLength) {
+        void storeTo(void *dest, SmallInteger byteLength) {
             std::memcpy(dest, &buffer()->fields[0], byteLength);
         }
 
-        void transferBytesTo(Offset start,ObjectPointer dest, Offset destStart, Offset byteLength) {
+        void transferBytesTo(SmallInteger start,ObjectPointer dest, SmallInteger destStart, SmallInteger byteLength) {
             std::memcpy(&dest.buffer()->fields[0] + destStart, &buffer()->fields[0] + start,
                         byteLength);
         }
 
-        void transferFieldsTo(Offset start, ObjectPointer dest, Offset destStart, Offset numberOfFields) {
+        void transferFieldsTo(SmallInteger start, ObjectPointer dest, SmallInteger destStart, SmallInteger numberOfFields) {
             std::memcpy(&dest.object()->fields[destStart], &object()->fields[start], numberOfFields * sizeof(Word));
         }
 
@@ -209,13 +209,13 @@ namespace pimii {
             return std::string_view(reinterpret_cast<char *>(&buffer()->fields[0]));
         }
 
-        Offset hashString() const noexcept {
+        SmallInteger hashString() const noexcept {
             std::hash<std::string_view> fn;
-            return (Offset) fn(stringView());
+            return (SmallInteger) fn(stringView());
         }
 
         int compare(const void *other, size_t length) const {
-            Offset thisSize = byteSize();
+            SmallInteger thisSize = byteSize();
             if (thisSize != length) {
                 return (int) (thisSize - length);
             }
@@ -224,8 +224,8 @@ namespace pimii {
         }
 
         int compareTo(ObjectPointer other) const {
-            Offset thisSize = byteSize();
-            Offset otherSize = other.byteSize();
+            SmallInteger thisSize = byteSize();
+            SmallInteger otherSize = other.byteSize();
             if (thisSize != otherSize) {
                 return thisSize > otherSize ? 1 : -1;
             }
@@ -233,15 +233,15 @@ namespace pimii {
             return memcmp(&buffer()->fields[0], &other.buffer()->fields[0], thisSize);
         }
 
-        Offset size() {
-            return (Offset) (unmask()->size & sizeMask());
+        SmallInteger size() {
+            return (SmallInteger) (unmask()->size & sizeMask());
         }
 
-        Offset byteSize() const {
+        SmallInteger byteSize() const {
             Word wordSize = buffer()->size & sizeMask();
             Word odd = highNibble() & ODD_MASK;
 
-            return (Offset) ((wordSize * sizeof(Word)) - odd);
+            return (SmallInteger) ((wordSize * sizeof(Word)) - odd);
         }
 
         inline ObjectPointer &operator=(const ObjectPointer &rhs) noexcept = default;
@@ -259,8 +259,8 @@ namespace pimii {
             return data != rhs.data;
         }
 
-        inline Offset hash() const noexcept {
-            return (Offset) data;
+        inline SmallInteger hash() const noexcept {
+            return (SmallInteger) data;
         }
 
     };

@@ -16,7 +16,7 @@ namespace pimii {
     void Assignment::emitByteCodes(EmitterContext& ctx) {
         expression->emitByteCodes(ctx);
 
-        Offset offset = ctx.findTemporaryIndex(name);
+        SmallInteger offset = ctx.findTemporaryIndex(name);
         if (offset >= 0) {
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY, offset);
             return;
@@ -31,7 +31,7 @@ namespace pimii {
         if (isupper(name[0])) {
             auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
             auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
-            Offset index = ctx.findOrAddLiteral(association);
+            SmallInteger index = ctx.findOrAddLiteral(association);
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_LITERAL_VARIABLE, index);
         }
 
@@ -42,12 +42,12 @@ namespace pimii {
         auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
         auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
 
-        Offset index = ctx.findOrAddLiteral(association);
+        SmallInteger index = ctx.findOrAddLiteral(association);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_VARIABLE, index);
     }
 
-    Offset EmitterContext::findTemporaryIndex(const std::string& name) {
-        for (auto i = (Offset) temporaries.size(); i-- > 0;) {
+    SmallInteger EmitterContext::findTemporaryIndex(const std::string& name) {
+        for (auto i = (SmallInteger) temporaries.size(); i-- > 0;) {
             if (name == temporaries[i]) {
                 return i;
             }
@@ -56,8 +56,8 @@ namespace pimii {
         return -1;
     }
 
-    Offset EmitterContext::findFieldIndex(const std::string& name) {
-        for (auto i = (Offset) fields.size(); i-- > 0;) {
+    SmallInteger EmitterContext::findFieldIndex(const std::string& name) {
+        for (auto i = (SmallInteger) fields.size(); i-- > 0;) {
             if (name == fields[i]) {
                 return i;
             }
@@ -87,15 +87,15 @@ namespace pimii {
         }
     }
 
-    Offset EmitterContext::addLiteral(ObjectPointer object) {
-        auto index = (Offset) literals.size();
+    SmallInteger EmitterContext::addLiteral(ObjectPointer object) {
+        auto index = (SmallInteger) literals.size();
         literals.emplace_back(object);
 
         return index;
     }
 
-    Offset EmitterContext::findOrAddLiteral(ObjectPointer object) {
-        for (Offset index = 0; index < literals.size(); index++) {
+    SmallInteger EmitterContext::findOrAddLiteral(ObjectPointer object) {
+        for (SmallInteger index = 0; index < literals.size(); index++) {
             if (literals[index] == object) {
                 return index;
             }
@@ -105,12 +105,12 @@ namespace pimii {
 
     void EmitterContext::pushTemporaries(const std::vector<std::string>& temporariesToPush) {
         temporaries.insert(temporaries.end(), temporariesToPush.begin(), temporariesToPush.end());
-        maxTemporaries = std::max(maxTemporaries, (Offset) temporaries.size());
+        maxTemporaries = std::max(maxTemporaries, (SmallInteger) temporaries.size());
     }
 
     void EmitterContext::pushTemporary(const std::string& temporary) {
         temporaries.emplace_back(temporary);
-        maxTemporaries = std::max(maxTemporaries, (Offset) temporaries.size());
+        maxTemporaries = std::max(maxTemporaries, (SmallInteger) temporaries.size());
     }
 
     void EmitterContext::popTemporaries(size_t numTemporaries) {
@@ -124,7 +124,7 @@ namespace pimii {
         return system;
     }
 
-    Offset EmitterContext::getMaxTemporaries() {
+    SmallInteger EmitterContext::getMaxTemporaries() {
         return maxTemporaries;
     }
 
@@ -136,22 +136,22 @@ namespace pimii {
         return opcodes;
     }
 
-    Offset EmitterContext::nextOpCodePosition() {
+    SmallInteger EmitterContext::nextOpCodePosition() {
         return opcodes.size();
     }
 
-    void EmitterContext::pushJump(uint8_t opcode, Offset delta) {
+    void EmitterContext::pushJump(uint8_t opcode, SmallInteger delta) {
         opcodes.emplace_back(opcode | (uint8_t) ((delta / 256) << 5));
         opcodes.emplace_back((uint8_t) (delta % 256));
     }
 
-    void EmitterContext::insertJump(Offset index, uint8_t opcode, Offset delta) {
+    void EmitterContext::insertJump(SmallInteger index, uint8_t opcode, SmallInteger delta) {
         opcodes[index] = opcode | (uint8_t) ((delta / 256) << 5);
         opcodes[index + 1] = (uint8_t) (delta % 256);
     }
 
-    Offset EmitterContext::pushJumpPlaceholder() {
-        Offset result = nextOpCodePosition();
+    SmallInteger EmitterContext::pushJumpPlaceholder() {
+        SmallInteger result = nextOpCodePosition();
         pushSingle(0);
         pushSingle(0);
         return result;
@@ -159,7 +159,7 @@ namespace pimii {
 
     void Block::emitByteCodes(EmitterContext& ctx) {
         ctx.pushCompound(Interpreter::OP_BLOCK_COPY, temporaries.size());
-        Offset jmpAddr = ctx.pushJumpPlaceholder();
+        SmallInteger jmpAddr = ctx.pushJumpPlaceholder();
         emitInner(ctx);
         ctx.pushCompound(Interpreter::OP_RETURN, Interpreter::OP_RETURN_STACK_TO_TO_CALLER_INDEX);
         ctx.insertJump(jmpAddr, Interpreter::OP_JUMP_ALWAYS, ctx.nextOpCodePosition() - jmpAddr - 2);
@@ -170,7 +170,7 @@ namespace pimii {
 
         for (auto i = 0; i < temporaries.size(); i++) {
             context.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY,
-                                  (Offset) context.getTemporaries().size() - i - 1);
+                                  (SmallInteger) context.getTemporaries().size() - i - 1);
         }
 
         for (auto& statement : statements) {
@@ -182,14 +182,14 @@ namespace pimii {
 
     void LiteralSymbol::emitByteCodes(EmitterContext& ctx) {
         ObjectPointer symbol = ctx.getSystem().getSymbolTable().lookup(name);
-        Offset index = ctx.findOrAddLiteral(symbol);
+        SmallInteger index = ctx.findOrAddLiteral(symbol);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
     void LiteralString::emitByteCodes(EmitterContext& ctx) {
         ObjectPointer string = ctx.getSystem().getMemoryManager().makeString(name,
                                                                              ctx.getSystem().getTypeSystem().stringType);
-        Offset index = ctx.addLiteral(string);
+        SmallInteger index = ctx.addLiteral(string);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
@@ -208,7 +208,7 @@ namespace pimii {
             return;
         }
 
-        Offset index = ctx.findOrAddLiteral(ObjectPointer::forSmallInt(number));
+        SmallInteger index = ctx.findOrAddLiteral(ObjectPointer::forSmallInt(number));
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
@@ -254,7 +254,7 @@ namespace pimii {
         }
 
         ObjectPointer symbol = ctx.getSystem().getSymbolTable().lookup(selector);
-        Offset index = ctx.findOrAddLiteral(symbol);
+        SmallInteger index = ctx.findOrAddLiteral(symbol);
         if (arguments.empty()) {
             ctx.pushWithIndex(Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS, index);
         } else if (arguments.size() == 1) {
@@ -262,7 +262,7 @@ namespace pimii {
         } else if (arguments.size() == 2) {
             ctx.pushWithIndex(Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_TWO_ARGS, index);
         } else {
-            ctx.pushWithIndex(Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_N_ARGS, (Offset) arguments.size());
+            ctx.pushWithIndex(Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_N_ARGS, (SmallInteger) arguments.size());
             ctx.pushSingle((uint8_t) index);
         }
     }
@@ -270,11 +270,11 @@ namespace pimii {
     bool MethodCall::emitOptimizedControlFlow(EmitterContext& ctx) {
         if (selector == "whileTrue:" && arguments.size() == 1 && receiver->type() == STMT_BLOCK &&
             arguments[0]->type() == STMT_BLOCK) {
-            Offset loopAddress = ctx.nextOpCodePosition();
+            SmallInteger loopAddress = ctx.nextOpCodePosition();
             reinterpret_cast<Block*>(receiver.get())->emitInner(ctx);
-            Offset jumpOnFalseLocation = ctx.pushJumpPlaceholder();
+            SmallInteger jumpOnFalseLocation = ctx.pushJumpPlaceholder();
             reinterpret_cast<Block*>(arguments[0].get())->emitInner(ctx);
-            Offset delta = ctx.nextOpCodePosition() - loopAddress;
+            SmallInteger delta = ctx.nextOpCodePosition() - loopAddress;
 
             ctx.pushJump(Interpreter::OP_JUMP_BACK, delta + 2);
             ctx.insertJump(jumpOnFalseLocation, Interpreter::OP_JUMP_ON_FALSE,
