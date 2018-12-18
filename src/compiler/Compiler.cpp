@@ -4,7 +4,7 @@
 
 #include "Compiler.h"
 #include "../vm/Interpreter.h"
-#include "../vm/Methods.h"
+#include "Methods.h"
 
 namespace pimii {
 
@@ -32,7 +32,12 @@ namespace pimii {
             }
         }
 
+        bool successiveStatement = false;
         while (!tokenizer.current().isEOI() && tokenizer.current().type != SEPARATOR) {
+            if (successiveStatement) {
+                context.pushSingle(Interpreter::OP_POP);
+            }
+            successiveStatement = true;
             std::unique_ptr<Statement> stmt = statement();
             stmt->emitByteCodes(context);
             if (tokenizer.current().type == FULLSTOP) {
@@ -48,9 +53,10 @@ namespace pimii {
 
         context.pushCompound(Interpreter::OP_RETURN, Interpreter::OP_RETURN_STACK_TOP_TO_SENDER_INDEX);
 
-        Methods methods(system.getMemoryManager(), system.getTypeSystem());
+        Methods methods(system.memoryManager(), system);
         return methods.createMethod(
-                primitiveIndex >= 0 ? MethodHeader::forPrimitive((SmallInteger) primitiveIndex, context.getMaxTemporaries(),
+                primitiveIndex >= 0 ? MethodHeader::forPrimitive((SmallInteger) primitiveIndex,
+                                                                 context.getMaxTemporaries(),
                                                                  false)
                                     : MethodHeader::forByteCodes(context.getMaxTemporaries(), false),
                 context.getLiterals(), context.getOpCodes());
@@ -58,8 +64,8 @@ namespace pimii {
 
     void Compiler::compileMethodAndAdd(pimii::System& system) {
         ObjectPointer method = compileMethod(system);
-        Methods methods(system.getMemoryManager(), system.getTypeSystem());
-        methods.addMethod(type, system.getSymbolTable().lookup(selector), method);
+        Methods methods(system.memoryManager(), system);
+        methods.addMethod(type, system.symbolTable().lookup(selector), method);
     }
 
     void Compiler::parseSelector(EmitterContext& ctx) {

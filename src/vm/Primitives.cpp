@@ -7,17 +7,16 @@
 
 namespace pimii {
 
-    bool Primitives::equality(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::equality(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
 
-        interpreter.push(interpreter.pop() == interpreter.pop() ? interpreter.getSystem().trueValue
-                                                                : interpreter.getSystem().falseValue);
+        interpreter.push(interpreter.pop() == interpreter.pop() ? sys.valueTrue() : sys.valueFalse());
         return true;
     }
 
-    bool Primitives::lessThan(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::lessThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -26,12 +25,11 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 
-        interpreter.push(self < arg ? interpreter.getSystem().trueValue
-                                    : interpreter.getSystem().falseValue);
+        interpreter.push(self < arg ? sys.valueTrue() : sys.valueFalse());
         return true;
     }
 
-    bool Primitives::lessThanOrEqual(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
+    bool Primitives::lessThanOrEqual(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -40,12 +38,11 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 
-        interpreter.push(self <= arg ? interpreter.getSystem().trueValue
-                                     : interpreter.getSystem().falseValue);
+        interpreter.push(self <= arg ? sys.valueTrue() : sys.valueFalse());
         return true;
     }
 
-    bool Primitives::greaterThan(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
+    bool Primitives::greaterThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -54,12 +51,11 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 
-        interpreter.push(self > arg ? interpreter.getSystem().trueValue
-                                    : interpreter.getSystem().falseValue);
+        interpreter.push(self > arg ? sys.valueTrue() : sys.valueFalse());
         return true;
     }
 
-    bool Primitives::greaterThanOrEqual(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
+    bool Primitives::greaterThanOrEqual(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -68,12 +64,11 @@ namespace pimii {
         SmallInteger arg = interpreter.pop().smallInt();
         SmallInteger self = interpreter.pop().smallInt();
 
-        interpreter.push(self >= arg ? interpreter.getSystem().trueValue
-                                     : interpreter.getSystem().falseValue);
+        interpreter.push(self >= arg ? sys.valueTrue() : sys.valueFalse());
         return true;
     }
 
-    bool Primitives::add(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::add(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -87,7 +82,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::subtract(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::subtract(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -100,7 +95,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::multiply(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::multiply(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -113,7 +108,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::divide(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::divide(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -126,7 +121,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::remainder(pimii::Interpreter& interpreter, pimii::SmallInteger argumentCount) {
+    bool Primitives::remainder(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
             !interpreter.stackValue(1).isSmallInt()) {
             return false;
@@ -139,22 +134,22 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::basicNew(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::basicNew(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
 
         ObjectPointer type = interpreter.pop();
         //ensure type
-        ObjectPointer result = interpreter.getSystem().getMemoryManager().makeObject(
-                type[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt(), type);
+        ObjectPointer result = sys.memoryManager().makeObject(
+                type[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt(), type);
 
         interpreter.push(result);
 
         return true;
     }
 
-    bool Primitives::basicNewWith(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::basicNewWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
@@ -162,25 +157,25 @@ namespace pimii {
         SmallInteger size = interpreter.pop().smallInt();
         ObjectPointer type = interpreter.pop();
         //ensure type
-        ObjectPointer result = interpreter.getSystem().getMemoryManager().makeObject(
-                type[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + size, type);
+        ObjectPointer result = sys.memoryManager().makeObject(
+                type[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + size, type);
 
         interpreter.push(result);
 
         return true;
     }
 
-    bool Primitives::clazz(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::clazz(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
 
-        interpreter.push(interpreter.getSystem().getType(interpreter.pop()));
+        interpreter.push(sys.type(interpreter.pop()));
 
         return true;
     }
 
-    bool Primitives::id(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::id(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -189,7 +184,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::size(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::size(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -200,7 +195,7 @@ namespace pimii {
             return true;
         } else if (self.isObject()) {
             interpreter.push(ObjectPointer::forSmallInt(self.size() -
-                                                        self.type()[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt()));
+                                                        self.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt()));
             return true;
         } else if (self.isBuffer()) {
             interpreter.push(ObjectPointer::forSmallInt(self.byteSize()));
@@ -210,11 +205,11 @@ namespace pimii {
         return false;
     }
 
-    bool Primitives::value(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::value(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         ObjectPointer blockContext = interpreter.stackValue(argumentCount);
         // This primitive can only handle BlockContexts
         if (!blockContext.isObject() ||
-            blockContext.type() != interpreter.getSystem().getTypeSystem().blockContextType) {
+            blockContext.type() != sys.typeBlockContext()) {
             return false;
         }
 
@@ -223,8 +218,8 @@ namespace pimii {
             return false;
         }
 
-        interpreter.getActiveContext().transferFieldsTo(
-                interpreter.getStackBasePointer() + interpreter.getStackPointer() - argumentCount, blockContext,
+        interpreter.currentActiveContext().transferFieldsTo(
+                interpreter.basePointer() + interpreter.stackPointer() - argumentCount, blockContext,
                 Interpreter::CONTEXT_FIXED_SIZE, argumentCount);
 
         interpreter.pop(argumentCount + 1);
@@ -232,61 +227,60 @@ namespace pimii {
         blockContext[Interpreter::CONTEXT_IP_FIELD] =
                 blockContext[Interpreter::CONTEXT_INITIAL_IP_FIELD].smallInt();
         blockContext[Interpreter::CONTEXT_SP_FIELD] = argumentCount;
-        blockContext[Interpreter::CONTEXT_CALLER_FIELD] = interpreter.getActiveContext();
+        blockContext[Interpreter::CONTEXT_CALLER_FIELD] = interpreter.currentActiveContext();
 
         interpreter.newActiveContext(blockContext);
 
         return true;
     }
 
-    bool Primitives::valueWith(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::valueWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::perform(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::perform(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::performWith(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::performWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::at(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::at(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::atPut(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::atPut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         return false;
     }
 
-    bool Primitives::asSymbol(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::asSymbol(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
 
         ObjectPointer self = interpreter.pop();
-        if (!interpreter.getSystem().is(self, interpreter.getSystem().getTypeSystem().stringType)) {
+        if (!sys.is(self, sys.typeString())) {
             interpreter.unPop(1);
             return false;
         }
 
-        interpreter.push(interpreter.getSystem().getSymbolTable().lookup(self.stringView()));
+        interpreter.push(sys.symbolTable().lookup(self.stringView()));
         return true;
     }
 
-    bool Primitives::asString(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::asString(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
 
         ObjectPointer self = interpreter.pop();
-        if (!interpreter.getSystem().is(self, interpreter.getSystem().getTypeSystem().symbolType)) {
+        if (!sys.is(self, sys.typeSymbol())) {
             interpreter.unPop(1);
             return false;
         }
 
-        ObjectPointer result = interpreter.getSystem().getMemoryManager().makeBuffer(self.byteSize(),
-                                                                                     interpreter.getSystem().getTypeSystem().stringType);
+        ObjectPointer result = sys.memoryManager().makeBuffer(self.byteSize(), sys.typeString());
         self.transferBytesTo(0, result, 0, self.byteSize());
 
         interpreter.push(result);
@@ -294,7 +288,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::concat(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::concat(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
@@ -307,35 +301,34 @@ namespace pimii {
             return true;
         }
 
-        if (!interpreter.getSystem().is(arg, interpreter.getSystem().getTypeSystem().stringType)) {
+        if (!sys.is(arg, sys.typeString())) {
             interpreter.unPop(2);
             return false;
         }
 
-        if (!interpreter.getSystem().is(self, interpreter.getSystem().getTypeSystem().stringType)) {
+        if (!sys.is(self, sys.typeString())) {
             interpreter.unPop(2);
             return false;
         }
 
-        ObjectPointer result = interpreter.getSystem().getMemoryManager().makeString(
+        ObjectPointer result = sys.memoryManager().makeString(
                 std::string(self.stringView()) + std::string(arg.stringView()),
-                interpreter.getSystem().getTypeSystem().stringType);
+                sys.typeString());
 
         interpreter.push(result);
 
         return true;
     }
 
-    bool Primitives::sysOut(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::sysOut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
 
         ObjectPointer arg = interpreter.pop();
-        interpreter.pop();
 
-        if (!interpreter.getSystem().is(arg, interpreter.getSystem().getTypeSystem().stringType)) {
-            interpreter.unPop(2);
+        if (!sys.is(arg, sys.typeString())) {
+            interpreter.unPop(1);
             return false;
         }
 
@@ -343,7 +336,7 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::fork(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::fork(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
@@ -351,7 +344,7 @@ namespace pimii {
         ObjectPointer blockContext = interpreter.stackValue(argumentCount);
         // This primitive can only handle BlockContexts
         if (!blockContext.isObject() ||
-            blockContext.type() != interpreter.getSystem().getTypeSystem().blockContextType) {
+            blockContext.type() != sys.typeBlockContext()) {
             return false;
         }
 
@@ -368,28 +361,28 @@ namespace pimii {
         blockContext[Interpreter::CONTEXT_CALLER_FIELD] = Nil::NIL;
         // TODO maybe clone HOME_CONTEXT and maybe even the block-context itself(?)
 
-        ObjectPointer process = interpreter.getSystem().getMemoryManager().makeObject(System::PROCESS_SIZE,
-                                                                                      interpreter.getSystem().getTypeSystem().processType);
+        ObjectPointer process = sys.memoryManager().makeObject(System::PROCESS_SIZE, sys.typeProcess());
         process[System::PROCESS_FIELD_CONTEXT] = blockContext;
+        process[System::PROCESS_FIELD_TIME] = 0;
 
-        interpreter.pushBack(process, interpreter.getSystem().processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+        interpreter.pushBack(process, sys.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                              System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
-        interpreter.pushBack(interpreter.getSystem().processor[System::PROCESSOR_FIELD_ACTIVE_PROCESS],
-                             interpreter.getSystem().processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+        interpreter.pushBack(sys.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS],
+                             sys.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                              System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
-        interpreter.contextSwitchExpected = true;
+        interpreter.requestContextSwitch();
 
         return true;
     }
 
-    bool Primitives::signal(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::signal(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
 
         ObjectPointer semaphore = interpreter.stackValue(argumentCount);
 //        if (!semaphore.isObject() ||
-//            semaphore.type() != interpreter.getSystem().getTypeSystem().semaphoreType) {
+//            semaphore.type() != sys.getTypeSystem().semaphoreType) {
 //            return false;
 //        }
 
@@ -398,14 +391,14 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::wait(Interpreter& interpreter, SmallInteger argumentCount) {
+    bool Primitives::wait(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
         }
 
         ObjectPointer semaphore = interpreter.stackValue(argumentCount);
 //        if (!semaphore.isObject() ||
-//            semaphore.type() != interpreter.getSystem().getTypeSystem().semaphoreType) {
+//            semaphore.type() != sys.getTypeSystem().semaphoreType) {
 //            return false;
 //        }
 
@@ -419,11 +412,11 @@ namespace pimii {
             return true;
         }
 
-        interpreter.pushBack(interpreter.getSystem().processor[System::PROCESSOR_FIELD_ACTIVE_PROCESS], semaphore,
+        interpreter.pushBack(sys.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS], semaphore,
                              System::SEMAPHORE_FIELD_FIRST_WAITING_PROCESS,
                              System::SEMAPHORE_FIELD_LAST_WAITING_PROCESS);
 
-        interpreter.contextSwitchExpected = true;
+        interpreter.requestContextSwitch();
         return true;
     }
 

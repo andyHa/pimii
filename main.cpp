@@ -5,7 +5,7 @@
 
 #include "src/vm/Interpreter.h"
 #include "src/vm/Primitives.h"
-#include "src/vm/Methods.h"
+#include "src/compiler/Methods.h"
 #include "src/compiler/Tokenizer.h"
 #include "src/compiler/Compiler.h"
 #include "src/compiler/SourceFileParser.h"
@@ -14,8 +14,8 @@
 int main() {
 
 
-    std::cout << pimii::minSmallInt() << std::endl;
-    std::cout << pimii::maxSmallInt() << std::endl;
+    std::cout << pimii::SmallIntegers::minSmallInt() << std::endl;
+    std::cout << pimii::SmallIntegers::maxSmallInt() << std::endl;
     std::cout << sizeof(std::chrono::steady_clock::time_point) << std::endl;
 //    pimii::Tokenizer tokenizer("((3 + 4) * -1) abs , §komisch 'Te\\'st' - #test 1_00_000_0");
 //    pimii::Token token = tokenizer.consume();
@@ -36,14 +36,15 @@ int main() {
 
     std::vector<pimii::Error> errors;
     pimii::Tokenizer tokenizer(
-            "[ [ true ] whileTrue: [ System log: 'T'. TimerSemaphore wait. ] ] fork.",
+            "[ [ true ] whileTrue: [ System log: 'T'. TimerSemaphore wait. ] ] fork. [ true ] whileTrue: [ true not ]",
             errors);
+
     pimii::Compiler compiler(tokenizer, errors, pimii::Nil::NIL);
     pimii::ObjectPointer method = compiler.compileExpression(sys);
     //pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
 //    pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
-    pimii::ObjectPointer context = sys.getMemoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+    pimii::ObjectPointer context = sys.memoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
                                                                      pimii::Nil::NIL);
     context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
     context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
@@ -54,7 +55,14 @@ int main() {
     std::thread([&sys]() {
         while (true) {
             sys.irq(pimii::IRQ_TIMER);
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+    }).detach();
+
+    std::thread([&interpreter]() {
+        while (true) {
+            interpreter.updateMetrics();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }).detach();
 

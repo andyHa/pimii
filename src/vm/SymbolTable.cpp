@@ -4,28 +4,23 @@
 
 #include <iostream>
 #include "SymbolTable.h"
-#include "Looping.h"
+#include "../common/Looping.h"
 
 namespace pimii {
 
-    const SmallInteger SymbolTable::FIELD_TALLY = 0;
-    const SmallInteger SymbolTable::FIELD_TABLE = 1;
-    const SmallInteger SymbolTable::SIZE = 2;
-
-    SymbolTable::SymbolTable(MemoryManager &mm) : mm(mm), symbolType(Nil::NIL), symbolTable(
+    SymbolTable::SymbolTable(MemoryManager& mm) : mm(mm), symbolType(Nil::NIL), symbolTable(
             mm.makeRootObject(SIZE, Nil::NIL)) {
         symbolTable[FIELD_TALLY] = 0;
         symbolTable[FIELD_TABLE] = ObjectPointer(mm.makeObject(512, Nil::NIL));
     }
 
-    ObjectPointer SymbolTable::lookup(const std::string_view &name) {
+    ObjectPointer SymbolTable::lookup(const std::string_view& name) {
         std::hash<std::string_view> hasher;
-        auto hash = (SmallInteger) hasher(name);
+        auto hash = SmallIntegers::toSafeSmallInteger(hasher(name));
         ObjectPointer table = symbolTable[FIELD_TABLE];
 
         for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
             if (table[loop()] == Nil::NIL) {
-                //TODO make root string
                 table[loop()] = mm.makeString(name, symbolType);
                 SmallInteger newSize = symbolTable[FIELD_TALLY].smallInt() + 1;
                 symbolTable[FIELD_TALLY] = newSize;
@@ -33,13 +28,12 @@ namespace pimii {
                     grow(table);
                 }
                 return table[loop()];
-            } else if (table[loop()].compare(name.data(), name.size() + 1) == 0) {
+            } else if (table[loop()].compare(name.data(), SmallIntegers::toSmallInteger(name.size() + 1)) == 0) {
                 return table[loop()];
             }
         }
 
-        //TODO horrible error
-        return Nil::NIL;
+        throw std::runtime_error("Failed to lookup a symbol in the symbol table!");
     }
 
     void SymbolTable::grow(ObjectPointer table) {
@@ -50,7 +44,6 @@ namespace pimii {
                 reInsert(newTable, table[i]);
             }
         }
-
     }
 
     void SymbolTable::reInsert(ObjectPointer table, ObjectPointer symbol) {
@@ -63,7 +56,7 @@ namespace pimii {
             }
         }
 
-        // TODO horrible error
+        throw std::runtime_error("Failed to re-insert a symbol in the symbol table!");
     }
 
     void SymbolTable::installTypes(ObjectPointer symbolTableType, ObjectPointer arrayType, ObjectPointer symbolType) {
@@ -78,7 +71,6 @@ namespace pimii {
                 table[i].type(symbolType);
             }
         }
-
     }
 
 }

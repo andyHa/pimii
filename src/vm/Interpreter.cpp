@@ -6,165 +6,125 @@
 #include <iostream>
 #include "Interpreter.h"
 #include "Primitives.h"
-#include "Looping.h"
-#include "Methods.h"
+#include "../common/Looping.h"
+#include "../compiler/Methods.h"
 
 namespace pimii {
-
-    const SmallInteger Interpreter::CONTEXT_FIXED_SIZE = 6;
-    const SmallInteger Interpreter::CONTEXT_SENDER_FIELD = 0;
-    const SmallInteger Interpreter::CONTEXT_CALLER_FIELD = 0;
-    const SmallInteger Interpreter::CONTEXT_IP_FIELD = 1;
-    const SmallInteger Interpreter::CONTEXT_SP_FIELD = 2;
-    const SmallInteger Interpreter::CONTEXT_METHOD_FIELD = 3;
-    const SmallInteger Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD = 3;
-    const SmallInteger Interpreter::CONTEXT_INITIAL_IP_FIELD = 4;
-    const SmallInteger Interpreter::CONTEXT_HOME_FIELD = 5;
-    const SmallInteger Interpreter::CONTEXT_RECEIVER_FIELD = 5;
-
-    const SmallInteger Interpreter::COMPILED_METHOD_SIZE = 2;
-    const SmallInteger Interpreter::COMPILED_METHOD_FIELD_HEADER = 0;
-    const SmallInteger Interpreter::COMPILED_METHOD_FIELD_OPCODES = 1;
-    const SmallInteger Interpreter::COMPILED_METHOD_FIELD_LITERALS_START = 2;
-    const SmallInteger Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = 6;
 
 
     Interpreter::Interpreter(System& system) : system(system), contextSwitchExpected(false) {
         // Install by emulating: "CompiledMethod class specialSelectors: <array>"
-        system.getTypeSystem().compiledMethodType[Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = system.getSpecialSelectors();
+        system.typeCompiledMethod()[Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = system.specialSelectors();
 
+        startup = std::chrono::steady_clock::now();
+        lastMetrics = std::chrono::steady_clock::now();
     }
 
     void Interpreter::run(ObjectPointer rootContext) {
-        rootProcess = system.getMemoryManager().makeObject(System::PROCESS_SIZE,
-                                                           system.getTypeSystem().processType);
+        rootProcess = system.memoryManager().makeObject(System::PROCESS_SIZE, system.typeProcess());
         rootProcess[System::PROCESS_FIELD_CONTEXT] = rootContext;
+        rootProcess[System::PROCESS_FIELD_TIME] = 0;
 
-        pushBack(rootProcess, system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+        pushBack(rootProcess, system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                  System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
         contextSwitchExpected = true;
 
         while (true) { //TODO for rootProcess done
-            if (!contextSwitchExpected) {
-                if (system.hasIRQ()) {
-                    if (system.isIRQ(IRQ_TIMER)) {
-                        ObjectPointer irqTable = system.processor[System::PROCESSOR_FIELD_IRQ_TABLE];
-                        if (irqTable != Nil::NIL) {
-                            ObjectPointer semaphore = irqTable[0];
-                            if (semaphore != Nil::NIL) {
-                                signalSemaphore(semaphore);
-                            }
-                        }
-                    }
-                    system.clearIRQ();
-                }
+            if (!contextSwitchExpected && system.hasIRQ()) {
+                handlePendingIRQs();
             }
 
             if (contextSwitchExpected) {
-                ObjectPointer activeProcess = system.processor[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
-
-                ObjectPointer nextProcess = popFront(system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
-                                                     System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
-                while (nextProcess == Nil::NIL) {
-                    std::unique_lock<std::mutex> l(system.work_lock);
-                    system.work_available.wait(l);
-                    if (system.hasIRQ()) {
-                        if (system.isIRQ(IRQ_TIMER)) {
-                            ObjectPointer irqTable = system.processor[System::PROCESSOR_FIELD_IRQ_TABLE];
-                            if (irqTable != Nil::NIL) {
-                                ObjectPointer semaphore = irqTable[0];
-                                if (semaphore != Nil::NIL) {
-                                    signalSemaphore(semaphore);
-                                }
-                            }
-                        }
-                        system.clearIRQ();
+                if (system.memoryManager().shouldRunRecommendedGC()) {
+                    ObjectPointer currentProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+                    if (currentProcess != Nil::NIL) {
+                        storeContextRegisters();
+                        currentProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
+                        system.memoryManager().runRecommendedGC();
+                        currentProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+                        activeContext = currentProcess[System::PROCESS_FIELD_CONTEXT];
+                        fetchContextRegisters();
                     }
-                    nextProcess = popFront(system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
-                                           System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
                 }
-                if (nextProcess == Nil::NIL) {
-                    return; //TODO idle
-                }
-
-                contextSwitchExpected = false;
-                std::cout << "NEXT PROCESS " << nextProcess.hash() << std::endl;
-
-                if (activeProcess != Nil::NIL) {
-                    activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
-                }
-                system.processor[System::PROCESSOR_FIELD_ACTIVE_PROCESS] = nextProcess;
-
-                newActiveContext(nextProcess[System::PROCESS_FIELD_CONTEXT]);
+                handleContextSwitch();
             }
 
             uint8_t opcode = fetchInstruction();
-            dispatchOpCode(opcode);
+            dispatchInstruction(opcode);
+            instuctionsExecuted++;
         }
     }
 
-    void Interpreter::dispatchOpCode(uint8_t opCode) {
+    void Interpreter::handlePendingIRQs() {
+        if (system.isIRQ(IRQ_TIMER)) {
+            ObjectPointer irqTable = system.processor()[System::PROCESSOR_FIELD_IRQ_TABLE];
+            if (irqTable != Nil::NIL) {
+                ObjectPointer semaphore = irqTable[0];
+                if (semaphore != Nil::NIL) {
+                    signalSemaphore(semaphore);
+                }
+            }
+        }
+        system.clearIRQ();
+    }
+
+    void Interpreter::handleContextSwitch() {
+        SmallInteger elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - lastContextSwitch).count();
+
+        ObjectPointer activeProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+
+        ObjectPointer nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                                             System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        while (nextProcess == Nil::NIL) {
+            if (system.memoryManager().shouldIdleGC()) {
+                storeContextRegisters();
+                activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
+                system.memoryManager().idleGC();
+                activeContext = activeProcess[System::PROCESS_FIELD_CONTEXT];
+                fetchContextRegisters();
+            }
+            std::unique_lock<std::mutex> lock(irq_lock);
+            system.irgAvailable().wait(lock);
+            if (system.hasIRQ()) {
+                handlePendingIRQs();
+            }
+            nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                                   System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        }
+
+        contextSwitchExpected = false;
+        lastContextSwitch = std::chrono::steady_clock::now();
+        std::cout << "NEXT PROCESS " << nextProcess.hash() << std::endl;
+
+        if (activeProcess != Nil::NIL) {
+            activeProcess[System::PROCESS_FIELD_TIME] =
+                    activeProcess[System::PROCESS_FIELD_TIME].smallInt() + elapsedTime;
+            activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
+        }
+        system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS] = nextProcess;
+
+        newActiveContext(nextProcess[System::PROCESS_FIELD_CONTEXT]);
+        activeMicros += elapsedTime;
+    }
+
+
+    void Interpreter::dispatchInstruction(uint8_t opCode) {
         uint8_t code = opCode & (uint8_t) 0b11111;
         uint8_t index = opCode >> 5;
 
         switch (code) {
             case OP_RETURN:
-                switch (index) {
-                    case OP_RETURN_RECEIVER_INDEX:
-                        returnValueTo(receiver, sender());
-                        return;
-                    case OP_RETURN_TRUE_INDEX:
-                        returnValueTo(system.trueValue, sender());
-                        return;
-                    case OP_RETURN_FALSE_INDEX:
-                        returnValueTo(system.falseValue, sender());
-                        return;
-                    case OP_RETURN_NIL_INDEX:
-                        returnValueTo(Nil::NIL, sender());
-                        return;
-                    case OP_RETURN_STACK_TOP_TO_SENDER_INDEX:
-                        returnValueTo(pop(), sender());
-                        return;
-                    case OP_RETURN_STACK_TO_TO_CALLER_INDEX:
-                        returnValueTo(pop(), caller());
-                        return;
-                }
-                //TODO
+                dispatchReturn(index);
                 return;
             case OP_PUSH:
-                switch (index) {
-                    case OP_PUSH_RECEIVER_INDEX:
-                        push(receiver);
-                        return;
-                    case OP_PUSH_TRUE_INDEX:
-                        push(system.trueValue);
-                        return;
-                    case OP_PUSH_FALSE_INDEX:
-                        push(system.falseValue);
-                        return;
-                    case OP_PUSH_NIL_INDEX:
-                        push(Nil::NIL);
-                        return;
-                    case OP_PUSH_MINUS_ONE_INDEX:
-                        push(ObjectPointer::forSmallInt(-1));
-                        return;
-                    case OP_PUSH_ZERO_INDEX:
-                        push(ObjectPointer::forSmallInt(0));
-                        return;
-                    case OP_PUSH_ONE_INDEX:
-                        push(ObjectPointer::forSmallInt(1));
-                        return;
-                    case OP_PUSH_TWO_INDEX:
-                        push(ObjectPointer::forSmallInt(2));
-                        return;
-                }
-                //TODO
+                dispatchPush(index);
                 return;
             case OP_JUMP_BACK:
             case OP_JUMP_ALWAYS:
             case OP_JUMP_ON_TRUE:
             case OP_JUMP_ON_FALSE:
-                handleJump(opCode, index);
+                dispatchJump(opCode, index);
                 return;
             case OP_BLOCK_COPY:
                 performBlockCopy(index);
@@ -197,6 +157,12 @@ namespace pimii {
             case OP_POP_AND_STORE_IN_LITERAL_VARIABLE:
                 literal(index)[SystemDictionary::ASSOCIATION_FIELD_VALUE] = pop();
                 return;
+            case OP_POP:
+                pop();
+                return;
+            case OP_DUPLICAE_STACK_TOP:
+                push(stackTop());
+                return;
             case OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS:
                 send(literal(index), 0);
                 return;
@@ -211,23 +177,23 @@ namespace pimii {
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_NO_ARGS:
                 if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 0)) {
-                    send(system.getSpecialSelector(index), 0);
+                    send(system.specialSelector(index), 0);
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_ONE_ARG:
                 if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 1)) {
-                    send(system.getSpecialSelector(index), 1);
+                    send(system.specialSelector(index), 1);
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS:
                 if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 2)) {
-                    send(system.getSpecialSelector(index), 2);
+                    send(system.specialSelector(index), 2);
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS:
                 SmallInteger primitiveIndex = fetchInstruction();
                 if (primitiveIndex > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(primitiveIndex, index)) {
-                    send(system.getSpecialSelector(index), index);
+                    send(system.specialSelector(index), index);
                 }
                 return;
         }
@@ -246,8 +212,8 @@ namespace pimii {
     }
 
     void Interpreter::storeContextRegisters() {
-        activeContext[CONTEXT_IP_FIELD] = instructionPointer;
-        activeContext[CONTEXT_SP_FIELD] = stackPointer;
+        activeContext[CONTEXT_IP_FIELD] = ip;
+        activeContext[CONTEXT_SP_FIELD] = sp;
     }
 
     void Interpreter::fetchContextRegisters() {
@@ -264,56 +230,15 @@ namespace pimii {
         method = homeContext[CONTEXT_METHOD_FIELD];
         opCodes = method[COMPILED_METHOD_FIELD_OPCODES];
         maxIP = opCodes.byteSize();
-        instructionPointer = (SmallInteger) activeContext[CONTEXT_IP_FIELD].smallInt();
-        stackPointer = (SmallInteger) activeContext[CONTEXT_SP_FIELD].smallInt();
+        ip = (SmallInteger) activeContext[CONTEXT_IP_FIELD].smallInt();
+        sp = (SmallInteger) activeContext[CONTEXT_SP_FIELD].smallInt();
     }
 
     uint8_t Interpreter::fetchInstruction() {
-        if (instructionPointer >= maxIP) {
+        if (ip >= maxIP) {
             return OP_RETURN;
         }
-        return (uint8_t) opCodes.fetchByte(instructionPointer++);
-    }
-
-    void Interpreter::push(ObjectPointer value) {
-        //TODO stack limits!
-        activeContext[getStackBasePointer() + (stackPointer++)] = value;
-    }
-
-    ObjectPointer Interpreter::pop() {
-        if (stackPointer == 0) {
-            return Nil::NIL; //TODO error?
-        }
-        return activeContext[getStackBasePointer() + (--stackPointer)];
-    }
-
-    ObjectPointer Interpreter::stackTop() {
-        if (stackPointer == 0) {
-            return Nil::NIL; //TODO error?
-        }
-        return activeContext[getStackBasePointer() + (stackPointer - 1)];
-    }
-
-    ObjectPointer Interpreter::stackValue(SmallInteger offset) {
-        SmallInteger effectiveStackPointer = stackPointer - offset;
-        if (effectiveStackPointer <= 0) {
-            return Nil::NIL; //TODO error?
-        }
-        return activeContext[getStackBasePointer() + (effectiveStackPointer - 1)];
-    }
-
-    void Interpreter::pop(SmallInteger number) {
-        if (stackPointer >= number) {
-            stackPointer -= number;
-        } else {
-            //TODO error?
-            stackPointer = 0;
-        }
-    }
-
-    void Interpreter::unPop(SmallInteger number) {
-        //TODO limit1!
-        stackPointer += number;
+        return (uint8_t) opCodes.fetchByte(ip++);
     }
 
     ObjectPointer Interpreter::sender() {
@@ -351,17 +276,13 @@ namespace pimii {
 
     ObjectPointer Interpreter::findMethod(ObjectPointer type, ObjectPointer selector) {
         while (type != Nil::NIL) {
-
-            std::cout << "Finding " << selector.stringView() << " in " << type[TypeSystem::TYPE_FIELD_NAME].stringView()
-                      << std::endl;
-
-            if (type[TypeSystem::TYPE_FIELD_SELECTORS] != Nil::NIL) {
+            if (type[System::TYPE_FIELD_SELECTORS] != Nil::NIL) {
                 ObjectPointer method = findMethodInType(type, selector);
                 if (method != Nil::NIL) {
                     return method;
                 }
             }
-            type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
+            type = type[System::TYPE_FIELD_SUPERTYPE];
         }
 
 
@@ -369,12 +290,14 @@ namespace pimii {
     }
 
     ObjectPointer Interpreter::findMethodInType(ObjectPointer type, ObjectPointer selector) {
-        ObjectPointer selectors = type[TypeSystem::TYPE_FIELD_SELECTORS];
+        ObjectPointer selectors = type[System::TYPE_FIELD_SELECTORS];
         for (Looping loop = Looping(selectors.size(), selector.hash()); loop.hasNext(); loop.next()) {
             if (selectors[loop()] == selector) {
-                return type[TypeSystem::TYPE_FIELD_METHODS][loop()];
+                return type[System::TYPE_FIELD_METHODS][loop()];
             } else if (selectors[loop()] == Nil::NIL) {
                 return Nil::NIL;
+            } else {
+                std::cout << "XX " << selectors[loop()].stringView() << std::endl;
             }
         }
 
@@ -383,10 +306,9 @@ namespace pimii {
 
     void Interpreter::send(ObjectPointer selector, SmallInteger numArguments) {
         ObjectPointer newReceiver = stackValue(numArguments);
-        ObjectPointer type = system.getType(newReceiver);
-        std::cout << "SENDING " << newReceiver.hash() << " " << selector.stringView() << std::endl;
+        ObjectPointer type = system.type(newReceiver);
+        std::cout << selector.stringView() << "type: " << type[System::TYPE_FIELD_NAME].stringView() << std::endl;
         ObjectPointer newMethod = findMethod(type, selector);
-
         MethodHeader header(newMethod[COMPILED_METHOD_FIELD_HEADER].smallInt());
 
         if (header.methodType() == CompiledMethodType::MT_PRIMITIVE) {
@@ -406,11 +328,11 @@ namespace pimii {
             return;
         }
 
-        std::cout << "Sending " << selector.stringView() << std::endl;
+        //std::cout << "Sending " << selector.stringView() << std::endl;
 
         // TODO check if method is non-nil and has bytecodes
-        ObjectPointer newContext = system.getMemoryManager().makeObject(
-                CONTEXT_FIXED_SIZE + (header.largeContextFlag() ? 16 : 8), system.getTypeSystem().methodContextType);
+        ObjectPointer newContext = system.memoryManager().makeObject(
+                CONTEXT_FIXED_SIZE + (header.largeContextFlag() ? 16 : 8), system.typeMethodContext());
         newContext[CONTEXT_SENDER_FIELD] = activeContext;
         newContext[CONTEXT_IP_FIELD] = 0;
         newContext[CONTEXT_SP_FIELD] = header.temporaries();
@@ -420,7 +342,7 @@ namespace pimii {
         //TODO ensure proper stack limits
         //TODO ensure numArguments <= numTeporaries
         if (numArguments > 0) {
-            activeContext.transferFieldsTo(getStackBasePointer() + (stackPointer - 1 - numArguments), newContext,
+            activeContext.transferFieldsTo(basePointer() + (sp - 1 - numArguments), newContext,
                                            CONTEXT_FIXED_SIZE, numArguments);
         }
 
@@ -429,74 +351,55 @@ namespace pimii {
         newActiveContext(newContext);
     }
 
-    ObjectPointer Interpreter::getReceiver() {
-        return receiver;
-    }
-
     bool Interpreter::executePrimitive(SmallInteger index, SmallInteger numberOfArguments) {
-        return Primitives::executePrimitive(index, *this, numberOfArguments);
+        return Primitives::executePrimitive(index, *this, system, numberOfArguments);
     }
 
     bool Interpreter::isBlockContext(ObjectPointer context) {
         return context[CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].isSmallInt();
     }
 
-    System& Interpreter::getSystem() {
-        return system;
-    }
 
-    SmallInteger Interpreter::getInstructionPointer() {
-        return instructionPointer;
-    }
-
-    ObjectPointer Interpreter::getActiveContext() {
-        return activeContext;
-    }
-
-    SmallInteger Interpreter::getStackPointer() {
-        return stackPointer;
-    }
-
-    SmallInteger Interpreter::getStackBasePointer() {
-        return CONTEXT_FIXED_SIZE + temporaryCount;
-    }
-
-    void Interpreter::handleJump(uint8_t code, uint8_t index) {
+    void Interpreter::dispatchJump(uint8_t code, uint8_t index) {
         int delta = index * 255 + fetchInstruction();
 
         switch (code) {
             case OP_JUMP_BACK:
                 pop();
-                if (delta > instructionPointer) {
-                    instructionPointer = 0;
+                if (delta > ip) {
+                    ip = 0;
                 } else {
-                    instructionPointer = instructionPointer - delta;
+                    ip = ip - delta;
                 }
                 return;
             case OP_JUMP_ALWAYS:
-                instructionPointer = instructionPointer + delta;
+                ip = ip + delta;
                 return;
             case OP_JUMP_ON_TRUE:
-                if (stackTop() == system.trueValue) {
+                if (stackTop() == system.valueTrue()) {
+                    ip = ip + delta;
+                } else {
                     pop();
-                    instructionPointer = instructionPointer + delta;
                 }
                 return;
             case OP_JUMP_ON_FALSE:
-                if (stackTop() == system.falseValue) {
+                if (stackTop() == system.valueFalse()) {
+                    ip = ip + delta;
+                } else {
                     pop();
-                    instructionPointer = instructionPointer + delta;
                 }
                 return;
+            default:
+                throw std::runtime_error("Invalid jump instruction");
         }
     }
 
     void Interpreter::performBlockCopy(uint8_t blockArgumentCount) {
-        ObjectPointer newContext = system.getMemoryManager().makeObject(
-                activeContext.size(), system.getTypeSystem().blockContextType);
+        ObjectPointer newContext = system.memoryManager().makeObject(
+                activeContext.size(), system.typeBlockContext());
 
         newContext[Interpreter::CONTEXT_INITIAL_IP_FIELD] =
-                instructionPointer + 2;
+                ip + 2;
         newContext[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = blockArgumentCount;
         newContext[Interpreter::CONTEXT_HOME_FIELD] = homeContext;
         push(ObjectPointer(newContext));
@@ -512,15 +415,17 @@ namespace pimii {
             return;
         }
 
-        pushFront(firstWaitingProcess, system.processor, System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+        pushFront(firstWaitingProcess, system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                   System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        pushBack(system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS], system.processor(),
+                 System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                 System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
         contextSwitchExpected = true;
     }
 
     ObjectPointer Interpreter::popFront(ObjectPointer list, SmallInteger first, SmallInteger last) {
         ObjectPointer next = list[first];
         if (next == Nil::NIL) {
-            std::cout << "POPF NIL " << first << " " << list.hash() << std::endl;
             return Nil::NIL;
         }
 
@@ -529,13 +434,11 @@ namespace pimii {
             list[last] = Nil::NIL;
         }
 
-        std::cout << "POPF " << next[System::LINK_VALUE].hash() << " " << first << " " << list.hash() << std::endl;
         return next[System::LINK_VALUE];
     }
 
     void Interpreter::pushFront(ObjectPointer value, ObjectPointer list, SmallInteger first, SmallInteger last) {
-        std::cout << "PUSHF " << value.hash() << " " << first << " " << list.hash() << std::endl;
-        ObjectPointer link = system.getMemoryManager().makeObject(System::LINK_SIZE, system.getTypeSystem().linkType);
+        ObjectPointer link = system.memoryManager().makeObject(System::LINK_SIZE, system.typeLink());
         link[System::LINK_VALUE] = value;
         ObjectPointer head = list[first];
         if (head == Nil::NIL) {
@@ -547,8 +450,7 @@ namespace pimii {
     }
 
     void Interpreter::pushBack(ObjectPointer value, ObjectPointer list, SmallInteger first, SmallInteger last) {
-        std::cout << "PUSHB " << value.hash() << " " << first << " " << list.hash() << std::endl;
-        ObjectPointer link = system.getMemoryManager().makeObject(System::LINK_SIZE, system.getTypeSystem().linkType);
+        ObjectPointer link = system.memoryManager().makeObject(System::LINK_SIZE, system.typeLink());
         link[System::LINK_VALUE] = value;
         ObjectPointer tail = list[last];
         if (tail == Nil::NIL) {
@@ -557,6 +459,92 @@ namespace pimii {
             tail[System::LINK_NEXT] = link;
         }
         list[last] = link;
+    }
+
+    SmallInteger Interpreter::elapsedMicros() {
+        long long int micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - startup).count();
+
+        if (micros > SmallIntegers::maxSmallInt()) {
+            startup = std::chrono::steady_clock::now();
+            return 0;
+        }
+
+        return static_cast<SmallInteger>(micros);
+    }
+
+    void Interpreter::updateMetrics() {
+        long long int micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - lastMetrics).count();
+        if (micros == 0) {
+            activeMicros = 0;
+        } else {
+            activePercent = 100 * activeMicros / micros;
+        }
+
+        instuctionsPerSecond = instuctionsExecuted;
+
+        std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s" << std::endl;
+        instuctionsExecuted = 0;
+        activeMicros = 0;
+        lastMetrics = std::chrono::steady_clock::now();
+    }
+
+    void Interpreter::dispatchReturn(uint8_t index) {
+        switch (index) {
+            case OP_RETURN_RECEIVER_INDEX:
+                returnValueTo(receiver, sender());
+                return;
+            case OP_RETURN_TRUE_INDEX:
+                returnValueTo(system.valueTrue(), sender());
+                return;
+            case OP_RETURN_FALSE_INDEX:
+                returnValueTo(system.valueFalse(), sender());
+                return;
+            case OP_RETURN_NIL_INDEX:
+                returnValueTo(Nil::NIL, sender());
+                return;
+            case OP_RETURN_STACK_TOP_TO_SENDER_INDEX:
+                returnValueTo(pop(), sender());
+                return;
+            case OP_RETURN_STACK_TO_TO_CALLER_INDEX:
+                returnValueTo(pop(), caller());
+                return;
+            default:
+                throw std::runtime_error("Invalid return instruction");
+        }
+    }
+
+    void Interpreter::dispatchPush(uint8_t index) {
+        switch (index) {
+            case OP_PUSH_RECEIVER_INDEX:
+                push(receiver);
+                return;
+            case OP_PUSH_TRUE_INDEX:
+                push(system.valueTrue());
+                return;
+            case OP_PUSH_FALSE_INDEX:
+                push(system.valueFalse());
+                return;
+            case OP_PUSH_NIL_INDEX:
+                push(Nil::NIL);
+                return;
+            case OP_PUSH_MINUS_ONE_INDEX:
+                push(ObjectPointer::forSmallInt(-1));
+                return;
+            case OP_PUSH_ZERO_INDEX:
+                push(ObjectPointer::forSmallInt(0));
+                return;
+            case OP_PUSH_ONE_INDEX:
+                push(ObjectPointer::forSmallInt(1));
+                return;
+            case OP_PUSH_TWO_INDEX:
+                push(ObjectPointer::forSmallInt(2));
+                return;
+            default:
+                throw std::runtime_error("Invalid push instruction");
+        }
+
     }
 
 

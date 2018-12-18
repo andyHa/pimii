@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <deque>
-#include "../vm/ObjectPointer.h"
+#include "../common/ObjectPointer.h"
 
 namespace pimii {
 

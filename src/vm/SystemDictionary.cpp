@@ -3,16 +3,9 @@
 //
 
 #include "SystemDictionary.h"
-#include "Looping.h"
+#include "../common/Looping.h"
 
 namespace pimii {
-
-    const SmallInteger SystemDictionary::DICTIONARY_SIZE = 2;
-    const SmallInteger SystemDictionary::DICTIONARY_FIELD_TALLY = 0;
-    const SmallInteger SystemDictionary::DICTIONARY_FIELD_TABLE = 1;
-    const SmallInteger SystemDictionary::ASSOCIATION_SIZE = 2;
-    const SmallInteger SystemDictionary::ASSOCIATION_FIELD_KEY = 0;
-    const SmallInteger SystemDictionary::ASSOCIATION_FIELD_VALUE = 1;
 
     SystemDictionary::SystemDictionary(MemoryManager &mm) : mm(mm), associationType(Nil::NIL), dictionary(
             mm.makeRootObject(DICTIONARY_SIZE, Nil::NIL)) {
@@ -45,8 +38,7 @@ namespace pimii {
             }
         }
 
-        //TODO horror
-        return Nil::NIL;
+        throw std::runtime_error("Failed to insert an association into the system dictionary!");
     }
 
     ObjectPointer SystemDictionary::atPut(ObjectPointer key, ObjectPointer value) {
@@ -62,7 +54,6 @@ namespace pimii {
                 reInsert(newTable, table[i]);
             }
         }
-
     }
 
     void SystemDictionary::reInsert(ObjectPointer table, ObjectPointer association) {
@@ -75,7 +66,7 @@ namespace pimii {
             }
         }
 
-        //TODO horror
+        throw std::runtime_error("Failed to re-insert an association into the system dictionary!");
     }
 
     ObjectPointer SystemDictionary::at(ObjectPointer key) {

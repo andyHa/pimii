@@ -10,65 +10,65 @@
 
 namespace pimii {
 
-    typedef bool(* Primitive)(Interpreter& interpreter, SmallInteger argumentCount);
+    typedef bool(* Primitive)(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
     class Primitives {
 
-        static bool equality(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool equality(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool lessThan(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool lessThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool lessThanOrEqual(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool lessThanOrEqual(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool greaterThan(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool greaterThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool greaterThanOrEqual(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool greaterThanOrEqual(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool add(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool add(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool subtract(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool subtract(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool multiply(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool multiply(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool divide(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool divide(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool remainder(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool remainder(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool basicNew(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool basicNew(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool basicNewWith(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool basicNewWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool clazz(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool clazz(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool id(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool id(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool size(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool size(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool fork(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool fork(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool signal(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool signal(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool wait(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool wait(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool value(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool value(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool valueWith(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool valueWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool perform(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool perform(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool performWith(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool performWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool at(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool at(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool atPut(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool atPut(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool asSymbol(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool asSymbol(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool asString(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool asString(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool concat(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool concat(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool sysOut(Interpreter& interpreter, SmallInteger argumentCount);
+        static bool sysOut(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
         static inline const std::array<Primitive, 34> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
                                                                  greaterThanOrEqual, add, subtract, multiply, divide,
@@ -121,8 +121,9 @@ namespace pimii {
         static inline const SmallInteger PRIMITIVE_CONCAT = 32;
         static inline const SmallInteger PRIMITIVE_SYSOUT = 33;
 
-        static inline bool executePrimitive(SmallInteger index, Interpreter& interpreter, SmallInteger argumentCount) {
-            return methods[index](interpreter, argumentCount);
+        static inline bool
+        executePrimitive(SmallInteger index, Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+            return methods[index](interpreter, sys, argumentCount);
         }
     };
 

@@ -5,8 +5,8 @@
 #ifndef MEM_METHODS_H
 #define MEM_METHODS_H
 
-#include "MemoryManager.h"
-#include "TypeSystem.h"
+#include "../mem/MemoryManager.h"
+#include "../vm/System.h"
 #include <vector>
 
 
@@ -77,12 +77,12 @@ namespace pimii {
     class Methods {
 
         MemoryManager& mm;
-        TypeSystem& types;
+        System& sys;
 
         void grow(ObjectPointer type, ObjectPointer selectors, ObjectPointer methods);
 
     public:
-        Methods(MemoryManager& mm, TypeSystem& types);
+        Methods(MemoryManager& mm, System& types);
 
         void addMethod(ObjectPointer type, ObjectPointer selector,
                        ObjectPointer compiledMethod);

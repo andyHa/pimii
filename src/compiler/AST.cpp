@@ -29,8 +29,8 @@ namespace pimii {
         }
 
         if (isupper(name[0])) {
-            auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
-            auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
+            auto symbol = ctx.getSystem().symbolTable().lookup(name);
+            auto association = ObjectPointer(ctx.getSystem().systemDictionary().at(symbol));
             SmallInteger index = ctx.findOrAddLiteral(association);
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_LITERAL_VARIABLE, index);
         }
@@ -39,8 +39,8 @@ namespace pimii {
     }
 
     void PushGlobal::emitByteCodes(EmitterContext& ctx) {
-        auto symbol = ctx.getSystem().getSymbolTable().lookup(name);
-        auto association = ObjectPointer(ctx.getSystem().getSystemDictionary().at(symbol));
+        auto symbol = ctx.getSystem().symbolTable().lookup(name);
+        auto association = ObjectPointer(ctx.getSystem().systemDictionary().at(symbol));
 
         SmallInteger index = ctx.findOrAddLiteral(association);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_VARIABLE, index);
@@ -173,7 +173,12 @@ namespace pimii {
                                   (SmallInteger) context.getTemporaries().size() - i - 1);
         }
 
+        bool successive = false;
         for (auto& statement : statements) {
+            if (successive) {
+                context.pushSingle(Interpreter::OP_POP);
+            }
+            successive = true;
             statement->emitByteCodes(context);
         }
 
@@ -181,14 +186,13 @@ namespace pimii {
     }
 
     void LiteralSymbol::emitByteCodes(EmitterContext& ctx) {
-        ObjectPointer symbol = ctx.getSystem().getSymbolTable().lookup(name);
+        ObjectPointer symbol = ctx.getSystem().symbolTable().lookup(name);
         SmallInteger index = ctx.findOrAddLiteral(symbol);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
     void LiteralString::emitByteCodes(EmitterContext& ctx) {
-        ObjectPointer string = ctx.getSystem().getMemoryManager().makeString(name,
-                                                                             ctx.getSystem().getTypeSystem().stringType);
+        ObjectPointer string = ctx.getSystem().memoryManager().makeString(name, ctx.getSystem().typeString());
         SmallInteger index = ctx.addLiteral(string);
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
@@ -238,7 +242,7 @@ namespace pimii {
             arg->emitByteCodes(ctx);
         }
 
-        int specialSelectorIndex = ctx.getSystem().getSpecialSelectorIndex(selector);
+        SmallInteger specialSelectorIndex = ctx.getSystem().specialSelectorIndex(selector);
         if (specialSelectorIndex >= 0) {
             if (arguments.empty()) {
                 ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_NO_ARGS, specialSelectorIndex);
@@ -253,7 +257,7 @@ namespace pimii {
             return;
         }
 
-        ObjectPointer symbol = ctx.getSystem().getSymbolTable().lookup(selector);
+        ObjectPointer symbol = ctx.getSystem().symbolTable().lookup(selector);
         SmallInteger index = ctx.findOrAddLiteral(symbol);
         if (arguments.empty()) {
             ctx.pushWithIndex(Interpreter::OP_SEND_LITERAL_SELECTOR_WITH_NO_ARGS, index);
@@ -275,7 +279,6 @@ namespace pimii {
             SmallInteger jumpOnFalseLocation = ctx.pushJumpPlaceholder();
             reinterpret_cast<Block*>(arguments[0].get())->emitInner(ctx);
             SmallInteger delta = ctx.nextOpCodePosition() - loopAddress;
-
             ctx.pushJump(Interpreter::OP_JUMP_BACK, delta + 2);
             ctx.insertJump(jumpOnFalseLocation, Interpreter::OP_JUMP_ON_FALSE,
                            ctx.nextOpCodePosition() - jumpOnFalseLocation - 2);

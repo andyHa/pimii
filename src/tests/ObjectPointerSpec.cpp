@@ -1,6 +1,6 @@
 #include "catch.hpp"
-#include "../vm/ObjectPointer.h"
-#include "../vm/MemoryManager.h"
+#include "../common/ObjectPointer.h"
+#include "../mem/MemoryManager.h"
 #include <memory>
 
 namespace pimii {

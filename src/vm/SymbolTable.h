@@ -6,8 +6,8 @@
 #define MEM_SYMBOLTABLE_H
 
 
-#include "ObjectPointer.h"
-#include "MemoryManager.h"
+#include "../common/ObjectPointer.h"
+#include "../mem/MemoryManager.h"
 
 namespace pimii {
 
@@ -15,16 +15,16 @@ namespace pimii {
         MemoryManager &mm;
         ObjectPointer symbolType;
         ObjectPointer symbolTable;
-        static const SmallInteger FIELD_TALLY;
-        static const SmallInteger FIELD_TABLE;
-        static const SmallInteger SIZE;
+        static constexpr SmallInteger FIELD_TALLY = 0;
+        static constexpr SmallInteger FIELD_TABLE = 1;
+        static constexpr SmallInteger SIZE = 2;
 
         void grow(ObjectPointer table);
 
         void reInsert(ObjectPointer table, ObjectPointer symbol);
 
     public:
-        SymbolTable(MemoryManager &mm);
+        explicit SymbolTable(MemoryManager &mm);
 
         ObjectPointer lookup(const std::string_view &name);
 

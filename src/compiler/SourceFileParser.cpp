@@ -59,15 +59,15 @@ namespace pimii {
             //TODD horrible error
         }
 
-        ObjectPointer superclassAsSymbol = system.getSymbolTable().lookup(superclassName);
-        ObjectPointer superclass = system.getSystemDictionary().getValue(superclassAsSymbol);
-        if (!system.is(superclass, system.getTypeSystem().classType)) {
+        ObjectPointer superclassAsSymbol = system.symbolTable().lookup(superclassName);
+        ObjectPointer superclass = system.systemDictionary().getValue(superclassAsSymbol);
+        if (!system.is(superclass, system.typeClass())) {
             errors.emplace_back(Error(tokenizer.currentLine(), "Unknown superclass: " + superclassName));
             return;
         }
 
-        ObjectPointer nameAsSymbol = system.getSymbolTable().lookup(className);
-        ObjectPointer type = system.getSystemDictionary().getValue(nameAsSymbol);
+        ObjectPointer nameAsSymbol = system.symbolTable().lookup(className);
+        ObjectPointer type = system.systemDictionary().getValue(nameAsSymbol);
 
         if (type == Nil::NIL) {
             createNewType(className, instanceFields, classFields, superclass, nameAsSymbol);
@@ -82,32 +82,32 @@ namespace pimii {
                                          const std::vector<std::string>& classFields, ObjectPointer superclass,
                                          ObjectPointer nameAsSymbol) {
         SmallInteger effectiveNumberOfFixedFields =
-                superclass[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
+                superclass[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
                 (SmallInteger) instanceFields.size();
         SmallInteger effectiveFixedClassFields =
-                superclass.type()[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
+                superclass.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
                 (SmallInteger) classFields.size();
-        ObjectPointer newClass = system.getTypeSystem().makeType(superclass, className, effectiveNumberOfFixedFields,
+        ObjectPointer newClass = system.makeType(superclass, className, effectiveNumberOfFixedFields,
                                                                  effectiveFixedClassFields);
         storeFields(newClass, instanceFields);
         storeFields(newClass.type(), classFields);
-        system.getSystemDictionary().atPut(nameAsSymbol, newClass);
+        system.systemDictionary().atPut(nameAsSymbol, newClass);
     }
 
     void SourceFileParser::updateExistingType(ObjectPointer type, const std::vector<std::string>& instanceFields,
                                               const std::vector<std::string>& classFields, ObjectPointer superclass) {
         SmallInteger effectiveNumberOfFixedFields =
-                superclass[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
+                superclass[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
                 (SmallInteger) instanceFields.size();
-        if (type[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() != effectiveNumberOfFixedFields) {
+        if (type[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() != effectiveNumberOfFixedFields) {
             errors.emplace_back(
                     Error(tokenizer.currentLine(), "Number of instance fields cannot be changed after the fact!"));
             return;
         }
         SmallInteger effectiveNumberOfFixedClassFields =
-                superclass.type()[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
+                superclass.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() +
                 (SmallInteger) classFields.size();
-        if (type.type()[TypeSystem::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() !=
+        if (type.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() !=
             effectiveNumberOfFixedClassFields) {
             errors.emplace_back(
                     Error(tokenizer.currentLine(), "Number of class fields cannot be changed after the fact!"));
@@ -116,7 +116,7 @@ namespace pimii {
 
         storeFields(type, instanceFields);
         storeFields(type.type(), classFields);
-        type[TypeSystem::TYPE_FIELD_SUPERTYPE] = superclass;
+        type[System::TYPE_FIELD_SUPERTYPE] = superclass;
     }
 
     void SourceFileParser::storeFields(ObjectPointer type, std::vector<std::string> fields) {
@@ -124,13 +124,13 @@ namespace pimii {
             return;
         }
 
-        ObjectPointer fieldArray = system.getMemoryManager().makeObject(fields.size(),
-                                                                        system.getTypeSystem().arrayType);
+        ObjectPointer fieldArray = system.memoryManager().makeObject(fields.size(),
+                                                                        system.typeArray());
         for (SmallInteger index = 0; index < fields.size(); index++) {
-            fieldArray[index] = system.getMemoryManager().makeString(fields[index],
-                                                                     system.getTypeSystem().stringType);
+            fieldArray[index] = system.memoryManager().makeString(fields[index],
+                                                                     system.typeString());
         }
-        type[TypeSystem::TYPE_FIELD_FIELD_NAMES] = fieldArray;
+        type[System::TYPE_FIELD_FIELD_NAMES] = fieldArray;
     }
 
     void SourceFileParser::parseMethodsSection() {
@@ -147,9 +147,9 @@ namespace pimii {
     }
 
     void SourceFileParser::handleMethodsSection(const std::string& className, bool classMethod) {
-        ObjectPointer classAsSymbol = system.getSymbolTable().lookup(className);
-        ObjectPointer type = system.getSystemDictionary().getValue(classAsSymbol);
-        if (!system.is(type, system.getTypeSystem().classType)) {
+        ObjectPointer classAsSymbol = system.symbolTable().lookup(className);
+        ObjectPointer type = system.systemDictionary().getValue(classAsSymbol);
+        if (!system.is(type, system.typeClass())) {
             errors.emplace_back(Error(tokenizer.currentLine(), "Unknown class: " + className));
             return;
         }

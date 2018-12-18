@@ -22,13 +22,13 @@ namespace pimii {
     public:
         explicit EmitterContext(System& system, ObjectPointer type) : system(system), maxTemporaries(0) {
             while (type != Nil::NIL) {
-                ObjectPointer fieldNames = type[TypeSystem::TYPE_FIELD_FIELD_NAMES];
+                ObjectPointer fieldNames = type[System::TYPE_FIELD_FIELD_NAMES];
                 if (fieldNames != Nil::NIL) {
                     for (SmallInteger index = fieldNames.size() - 1; index >= 0; index--) {
                         fields.insert(fields.begin(), std::string(fieldNames[index].stringView()));
                     }
                 }
-                type = type[TypeSystem::TYPE_FIELD_SUPERTYPE];
+                type = type[System::TYPE_FIELD_SUPERTYPE];
             }
         }
 

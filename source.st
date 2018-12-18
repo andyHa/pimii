@@ -118,7 +118,7 @@ value
 Methods: True
 ------------------------
 not
-    ^false
+    ^false.
 ------------------------
 ifTrue: aBlock
     ^aBlock value.
@@ -136,7 +136,7 @@ ifFalse: aBlock
 Methods: False
 ------------------------
 not
-    ^true
+    ^true.
 ------------------------
 ifTrue: aBlock
     ^nil.

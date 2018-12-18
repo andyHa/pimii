@@ -5,8 +5,8 @@
 #ifndef MEM_SYSTEMDICTIONARY_H
 #define MEM_SYSTEMDICTIONARY_H
 
-#include "ObjectPointer.h"
-#include "MemoryManager.h"
+#include "../common/ObjectPointer.h"
+#include "../mem/MemoryManager.h"
 
 namespace pimii {
 
@@ -22,17 +22,16 @@ namespace pimii {
         void reInsert(ObjectPointer table, ObjectPointer association);
 
     public:
-        static const SmallInteger DICTIONARY_SIZE;
-        static const SmallInteger DICTIONARY_FIELD_TALLY;
-        static const SmallInteger DICTIONARY_FIELD_TABLE;
-        static const SmallInteger ASSOCIATION_SIZE;
-        static const SmallInteger ASSOCIATION_FIELD_KEY;
-        static const SmallInteger ASSOCIATION_FIELD_VALUE;
+        static constexpr SmallInteger DICTIONARY_SIZE = 2;
+        static constexpr SmallInteger DICTIONARY_FIELD_TALLY = 0;
+        static constexpr SmallInteger DICTIONARY_FIELD_TABLE = 1;
+        static constexpr SmallInteger ASSOCIATION_SIZE = 2;
+        static constexpr SmallInteger ASSOCIATION_FIELD_KEY = 0;
+        static constexpr SmallInteger ASSOCIATION_FIELD_VALUE = 1;
 
-        SystemDictionary(MemoryManager &mm);
+        explicit SystemDictionary(MemoryManager &mm);
 
         void installTypes(ObjectPointer systemDictionaryType, ObjectPointer arrayType, ObjectPointer associationType);
-
 
         ObjectPointer atPut(ObjectPointer key, ObjectPointer value);
 
