@@ -10,7 +10,7 @@
 namespace pimii {
 
     System::System()
-            : mm(16000000), symbols(mm), dictionary(mm),
+            : mm(32), symbols(mm), dictionary(mm),
               nilType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               metaClassType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               classType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
@@ -38,7 +38,7 @@ namespace pimii {
         metaClassClassType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = TYPE_SIZE;
 
         // Create "MetaClass"
-        const_cast<ObjectPointer*>(&metaClassType)->type(metaClassClassType);
+        metaClassType.type(metaClassClassType);
         metaClassType[TYPE_FIELD_NAME] = symbols.lookup("MetaClass");
         metaClassType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = TYPE_SIZE;
         dictionary.atPut(metaClassType[TYPE_FIELD_NAME], metaClassType);
@@ -52,7 +52,7 @@ namespace pimii {
         objectClassClassType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = TYPE_SIZE;
 
         // Create "Object"
-        const_cast<ObjectPointer*>(&objectType)->type(objectClassClassType);
+        objectType.type(objectClassClassType);
         objectType[TYPE_FIELD_NAME] = symbols.lookup("Object");
         objectType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = 0;
         dictionary.atPut(objectType[TYPE_FIELD_NAME], objectType);

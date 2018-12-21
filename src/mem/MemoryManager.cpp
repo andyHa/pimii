@@ -47,18 +47,21 @@ namespace pimii {
 
     void MemoryManager::gc(bool shouldCollectBuffers) {
         collectBuffers = shouldCollectBuffers;
-        collectBuffers = true;
+
         std::cout << "Objects-Size: " << activeObjects->usedWords() << std::endl;
         std::cout << "Objects-Count: " << activeObjects->objectCount() << std::endl;
         std::cout << "Buffers-Size: " << buffers->usedWords() << std::endl;
         std::cout << "Buffers-Count: " << buffers->objectCount() << std::endl;
         std::cout << "Root-Size: " << rootAllocator->usedWords() << std::endl;
         std::cout << "Root-Count: " << rootAllocator->objectCount() << std::endl;
+        std::unique_ptr<Allocator> garbageBuffers;
         std::unique_ptr<Allocator> garbageObjects = std::move(activeObjects);
-        activeObjects = std::make_unique<Allocator>(memoryLimitPerPool);
+        activeObjects = std::make_unique<Allocator>(maxSegmentsPerPool);
 
-        std::unique_ptr<Allocator> garbageBuffers = std::move(buffers);
-        buffers = std::make_unique<Allocator>(memoryLimitPerPool);
+        if (collectBuffers) {
+            garbageBuffers = std::move(buffers);
+            buffers = std::make_unique<Allocator>(maxSegmentsPerPool);
+        }
 
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         for (auto root : rootObjects) {
@@ -74,15 +77,18 @@ namespace pimii {
             objectsMoved++;
         }
 
-        activeObjects->resetGCRecommendation();
-        buffers->resetGCRecommendation();
+        objectsLowWaterMark =
+                std::min(objectsHighWaterMark,
+                         activeObjects->numberOfSegments() +
+                         (maxSegmentsPerPool - activeObjects->numberOfSegments()) / 3);
+        buffersLowWaterMark =
+                std::min(buffersHighWaterMark,
+                         activeObjects->numberOfSegments() + (maxSegmentsPerPool - buffers->allocatedWords()) / 3);
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        lastGCDurationMicros = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-        baselineCounter = totalObjects();
-        baselineAllocatedWords =
-                rootAllocator->allocatedWords() + activeObjects->allocatedWords() + buffers->allocatedWords();
-        lastGC = std::chrono::steady_clock::now();
+
+        gcDurationMicros += std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+        gcCounter++;
         std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()
                   << "us, Moved: " << objectsMoved
                   << std::endl;
@@ -108,9 +114,6 @@ namespace pimii {
     }
 
     ObjectPointer MemoryManager::copyBuffer(ObjectPointer buffer) {
-      //  if (buffer.hash() == 0) {
-            std::cout << "hit" << std::endl;
-   //     }
         buffer.gcInfo(STATE_FULLY_MOVED);
 
         if (!collectBuffers) {
@@ -160,14 +163,7 @@ namespace pimii {
     }
 
     bool MemoryManager::shouldIdleGC() {
-        SmallInteger millisSinceLastGC = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - lastGC).count();
-        if (millisSinceLastGC < 1000) {
-            return false;
-        }
-
-        return totalObjects() - baselineCounter >= 1000;
-
+        return activeObjects->allocatedWords() > objectsLowWaterMark || buffers->allocatedWords() > buffersLowWaterMark;
     }
 
     void MemoryManager::idleGC() {

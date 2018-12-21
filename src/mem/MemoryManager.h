@@ -12,25 +12,26 @@
 #include <vector>
 #include <deque>
 #include <chrono>
+#include <iostream>
 
 namespace pimii {
 
     class MemoryManager {
-        Word memoryLimitPerPool;
+        SmallInteger maxSegmentsPerPool;
+        SmallInteger buffersLowWaterMark;
+        SmallInteger buffersHighWaterMark;
+        SmallInteger objectsLowWaterMark;
+        SmallInteger objectsHighWaterMark;
         std::unique_ptr<Allocator> rootAllocator;
         std::list<ObjectPointer> rootObjects;
         std::unique_ptr<Allocator> activeObjects;
         std::unique_ptr<Allocator> buffers;
 
-        SmallInteger baselineCounter;
-        SmallInteger baselineAllocatedWords;
-        SmallInteger lastGCDurationMicros;
-        std::chrono::steady_clock::time_point lastGC;
+        SmallInteger gcDurationMicros;
+        SmallInteger gcCounter;
 
         bool collectBuffers;
         std::deque<ObjectPointer> gcWork;
-
-        static constexpr Word LARGE_OBJECT_SIZE = 100000;
 
         static constexpr char STATE_ORIGINAL = 0;
         static constexpr char STATE_PARTIALLY_MOVED = 1;
@@ -48,12 +49,13 @@ namespace pimii {
         ObjectPointer translateField(ObjectPointer field);
 
     public:
-        MemoryManager(Word memoryLimitPerPool) : memoryLimitPerPool(memoryLimitPerPool),
-                                                 rootAllocator(std::make_unique<Allocator>(memoryLimitPerPool)),
-                                                 activeObjects(std::make_unique<Allocator>(memoryLimitPerPool)),
-                                                 buffers(std::make_unique<Allocator>(memoryLimitPerPool)),
-                                                 baselineCounter(0), baselineAllocatedWords(0),
-                                                 lastGC(std::chrono::steady_clock::now()) {};
+        MemoryManager(Word maxSegmentsPerPool) : maxSegmentsPerPool(maxSegmentsPerPool),
+                                                 rootAllocator(std::make_unique<Allocator>(maxSegmentsPerPool)),
+                                                 activeObjects(std::make_unique<Allocator>(maxSegmentsPerPool)),
+                                                 buffers(std::make_unique<Allocator>(maxSegmentsPerPool)) {
+            objectsHighWaterMark = maxSegmentsPerPool - 2;
+            buffersHighWaterMark = objectsHighWaterMark;
+        };
 
 
         bool shouldIdleGC();
@@ -61,11 +63,12 @@ namespace pimii {
         void idleGC();
 
         bool shouldRunRecommendedGC() {
-            return activeObjects->shouldGC() || buffers->shouldGC();
+            return activeObjects->numberOfSegments() >= objectsHighWaterMark ||
+                   buffers->numberOfSegments() >= buffersHighWaterMark;
         }
 
         void runRecommendedGC() {
-            gc(buffers->shouldGC());
+            gc(buffers->numberOfSegments() > buffersHighWaterMark);
         }
 
         ObjectPointer makeRootObject(SmallInteger numberOfFields, ObjectPointer type);
@@ -113,6 +116,35 @@ namespace pimii {
 
         SmallInteger allocatedBufferWords() {
             return buffers->usedWords();
+        }
+
+        SmallInteger lowWatermarkForBuffers() {
+            return buffersLowWaterMark;
+        }
+
+        SmallInteger highWatermarkForBuffers() {
+            return buffersHighWaterMark;
+        }
+
+        SmallInteger lowWatermarkForObjects() {
+            return objectsLowWaterMark;
+        }
+
+        SmallInteger highWatermarkForObjects() {
+            return buffersHighWaterMark;
+        }
+
+        SmallInteger gcMicros() {
+            return gcDurationMicros;
+        }
+
+        SmallInteger gcCount() {
+            return gcCounter;
+        }
+
+        SmallInteger resetGCCounter() {
+            gcDurationMicros = 0;
+            gcCounter = 0;
         }
     };
 

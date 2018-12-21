@@ -81,6 +81,7 @@ namespace pimii {
                 storeContextRegisters();
                 activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
                 system.memoryManager().idleGC();
+                activeProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
                 activeContext = activeProcess[System::PROCESS_FIELD_CONTEXT];
                 fetchContextRegisters();
             }
@@ -296,8 +297,6 @@ namespace pimii {
                 return type[System::TYPE_FIELD_METHODS][loop()];
             } else if (selectors[loop()] == Nil::NIL) {
                 return Nil::NIL;
-            } else {
-                std::cout << "XX " << selectors[loop()].stringView() << std::endl;
             }
         }
 
@@ -307,8 +306,12 @@ namespace pimii {
     void Interpreter::send(ObjectPointer selector, SmallInteger numArguments) {
         ObjectPointer newReceiver = stackValue(numArguments);
         ObjectPointer type = system.type(newReceiver);
-        std::cout << selector.stringView() << "type: " << type[System::TYPE_FIELD_NAME].stringView() << std::endl;
         ObjectPointer newMethod = findMethod(type, selector);
+
+        if (newMethod == Nil::NIL) {
+            throw std::runtime_error("unknown method!");
+        }
+
         MethodHeader header(newMethod[COMPILED_METHOD_FIELD_HEADER].smallInt());
 
         if (header.methodType() == CompiledMethodType::MT_PRIMITIVE) {
@@ -484,10 +487,13 @@ namespace pimii {
 
         instuctionsPerSecond = instuctionsExecuted;
 
-        std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s" << std::endl;
+        std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s, GC: "
+                  << system.memoryManager().gcMicros() << "us" << std::endl;
         instuctionsExecuted = 0;
         activeMicros = 0;
         lastMetrics = std::chrono::steady_clock::now();
+        system.memoryManager().resetGCCounter();
+
     }
 
     void Interpreter::dispatchReturn(uint8_t index) {

@@ -14,10 +14,10 @@ namespace pimii {
         Word* basePointer;
         Word* allocationPointer;
         Word* endPointer;
-        Word size;
+        SmallInteger size;
         std::shared_ptr<Segment> previous;
     public:
-        explicit Segment(Word sizeOfPool, std::shared_ptr<Segment> previous) : size(sizeOfPool),
+        explicit Segment(SmallInteger sizeOfPool, std::shared_ptr<Segment> previous) : size(sizeOfPool),
                                                                                previous(std::move(previous)) {
             basePointer = (Word*) calloc(size, sizeof(Word));
             endPointer = basePointer + size;
@@ -29,12 +29,11 @@ namespace pimii {
             free(basePointer);
         }
 
-        Word sizeInWord() {
+        SmallInteger sizeInWords() {
             return size;
         }
 
         Word* alloc(SmallInteger numberOfWords) {
-
             if (allocationPointer + numberOfWords < endPointer) {
                 Word* result = allocationPointer;
                 allocationPointer += numberOfWords;

@@ -12,40 +12,44 @@
 namespace pimii {
 
     class Allocator {
-        std::shared_ptr <Segment> currentSegment;
-        Word allocated;
-        Word used;
-        Word counter;
-        Word limit;
-        bool gcRecommended;
+        std::shared_ptr<Segment> currentSegment;
+        SmallInteger allocated;
+        SmallInteger used;
+        SmallInteger counter;
+        SmallInteger maxSegments;
 
-        static constexpr Word SEGMENT_SIZE = 400000;
 
         Word* allocateInNewSegment(SmallInteger numberOfWords) {
-            if (allocated + SEGMENT_SIZE > limit) {
+            if (allocated >= maxSegments) {
                 return nullptr;
             }
             currentSegment = std::make_shared<Segment>(SEGMENT_SIZE, currentSegment);
-            allocated += SEGMENT_SIZE;
+            allocated += 1;
             used += numberOfWords;
             counter++;
-            gcRecommended = true;
 
             return currentSegment->alloc(numberOfWords);
         }
 
     public:
-        Allocator(Word limit) : currentSegment(nullptr), allocated(0), used(0), counter(0), limit(limit) {}
+        static constexpr SmallInteger SEGMENT_SIZE = 640000;
 
-        Word objectCount() const {
+        explicit Allocator(SmallInteger maxSegments) : currentSegment(nullptr), allocated(0), used(0), counter(0),
+                                                       maxSegments(maxSegments) {}
+
+        SmallInteger objectCount() const {
             return counter;
         }
 
-        Word allocatedWords() const {
+        SmallInteger allocatedWords() const {
+            return allocated * SEGMENT_SIZE;
+        }
+
+        SmallInteger numberOfSegments() const {
             return allocated;
         }
 
-        Word usedWords() const {
+        SmallInteger usedWords() const {
             return used;
         }
 
@@ -62,16 +66,8 @@ namespace pimii {
             return allocateInNewSegment(numberOfWords);
         }
 
-        const std::shared_ptr <Segment>& lastSegment() {
+        const std::shared_ptr<Segment>& lastSegment() {
             return currentSegment;
-        }
-
-        bool shouldGC() {
-            return gcRecommended;
-        }
-
-        void resetGCRecommendation() {
-            gcRecommended = false;
         }
     };
 }
