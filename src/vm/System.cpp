@@ -27,6 +27,7 @@ namespace pimii {
               linkType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               processType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               inputEventType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+              pointType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               trueValue(mm.makeRootObject(0, Nil::NIL)),
               falseValue(mm.makeRootObject(0, Nil::NIL)),
               proc(mm.makeRootObject(PROCESSOR_SIZE, Nil::NIL)),
@@ -105,6 +106,9 @@ namespace pimii {
 
         // Create "InputEvent"
         completeType(inputEventType, objectType, "InputEvent", 5);
+
+        // Create "Point"
+        completeType(pointType, objectType, "Point", 2);
 
         ObjectPointer symbolTableType = makeType(objectType, "SymbolTable", 2, TYPE_SIZE);
         symbols.installTypes(symbolTableType, arrayType, symbolType);

@@ -37,7 +37,7 @@ int main() {
 
     std::vector<pimii::Error> errors;
     pimii::Tokenizer tokenizer(
-            "[ [ true ] whileTrue: [ InputSemaphore wait. System log: Terminal nextEvent key asString. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
+            "[ [ true ] whileTrue: [ InputSemaphore wait. Terminal at: 0 @ 0 color: 0 put: Terminal nextEvent key asString. Terminal draw. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, pimii::Nil::NIL);
@@ -62,9 +62,9 @@ int main() {
     keypad(stdscr, TRUE);
 
     // Don't mask any mouse events
-    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+ //   mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
-    printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
+ //   printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
 
     std::thread([&sys]() {
         while (true) {

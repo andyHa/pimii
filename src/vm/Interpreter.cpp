@@ -252,10 +252,6 @@ namespace pimii {
     }
 
     ObjectPointer Interpreter::temporary(SmallInteger index) {
-        //TODO limits
-        std::cout << "Temporary " << index << " of context " << homeContext.hash()
-                  << " is " << homeContext[CONTEXT_FIXED_SIZE + index].hash() << " Type: "
-                  << homeContext[CONTEXT_FIXED_SIZE + index].type().hash() << std::endl;
         return homeContext[CONTEXT_FIXED_SIZE + index];
     }
 
@@ -347,7 +343,7 @@ namespace pimii {
         //TODO ensure proper stack limits
         //TODO ensure numArguments <= numTeporaries
         if (numArguments > 0) {
-            activeContext.transferFieldsTo(basePointer() + (sp - 1 - numArguments), newContext,
+            activeContext.transferFieldsTo(basePointer() + (sp - numArguments), newContext,
                                            CONTEXT_FIXED_SIZE, numArguments);
         }
 

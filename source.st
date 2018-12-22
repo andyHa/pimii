@@ -208,6 +208,21 @@ Class Methods: Terminal
 nextEvent
     <Primitive:34>
 ------------------------
+size
+    <Primitive:35>
+------------------------
+at: aPoint color: aColorIndex put: aString
+    <Primitive:36>
+------------------------
+showCursor
+    <Primitive:37>
+------------------------
+hideCursor
+    <Primitive:38>
+------------------------
+draw
+    <Primitive:39>
+------------------------
 
 Class: InputEvent
 Superclass: Object
@@ -217,4 +232,42 @@ Methods: InputEvent
 ------------------------
 key
     ^key.
+------------------------
+
+Class: Point
+Superclass: Object
+Instance Fields: x y
+
+Class Methods: Point
+------------------------
+x: newX y: newY
+    | point |
+    point := self new.
+    point x: newX.
+    point y: newY.
+    ^point.
+------------------------
+
+Methods: Point
+------------------------
+x
+    ^x.
+------------------------
+y
+    ^y.
+------------------------
+x: newX
+    x := newX.
+    ^self.
+------------------------
+y: newY
+    y := newY.
+    ^self.
+------------------------
+
+
+Methods: SmallInteger
+------------------------
+@ other
+    ^Point x: self y: other.
 ------------------------

@@ -70,15 +70,27 @@ namespace pimii {
 
         static bool sysOut(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool ncurses(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+        static bool terminalNextEvent(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static inline const std::array<Primitive, 35> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
+        static bool terminalSize(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+
+        static bool terminalShowString(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+
+        static bool terminalShowCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+
+        static bool terminalHideCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+
+        static bool terminalDraw(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+
+        static inline const std::array<Primitive, 40> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
                                                                  greaterThanOrEqual, add, subtract, multiply, divide,
                                                                  remainder, basicNew, basicNewWith, clazz,
                                                                  value, value, value, value, valueWith,
                                                                  perform, perform, perform, perform, performWith, id,
                                                                  size, fork, wait, signal, at, atPut, asSymbol,
-                                                                 asString, concat, sysOut, ncurses};
+                                                                 asString, concat, sysOut, terminalNextEvent,
+                                                                 terminalSize, terminalShowString, terminalShowCursor,
+                                                                 terminalHideCursor, terminalDraw};
 
 
     public:
@@ -122,7 +134,12 @@ namespace pimii {
         static inline const SmallInteger PRIMITIVE_AS_STRING = 31;
         static inline const SmallInteger PRIMITIVE_CONCAT = 32;
         static inline const SmallInteger PRIMITIVE_SYSOUT = 33;
-        static inline const SmallInteger PRIMITIVE_NCURSES = 34;
+        static inline const SmallInteger PRIMITIVE_TERMINAL_NEXT_EVENT = 34;
+        static inline const SmallInteger PRIMITIVE_TERMINAL_SIZE = 35;
+        static inline const SmallInteger PRIMITIVE_TERMINAL_SHOW_STRING = 36;
+        static inline const SmallInteger PRIMITIVE_TERMINAL_SHOW_CURSOR = 37;
+        static inline const SmallInteger PRIMITIVE_TERMINAL_HIDE_CURSOR = 38;
+        static inline const SmallInteger PRIMITIVE_TERMINAL_DRAW = 39;
 
         static inline bool
         executePrimitive(SmallInteger index, Interpreter& interpreter, System& sys, SmallInteger argumentCount) {

@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <ncurses.h>
 #include "Primitives.h"
 
 namespace pimii {
@@ -420,32 +421,69 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::ncurses(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount == 0) {
-            ObjectPointer event = sys.popInputEvent();
-            if (event != Nil::NIL) {
-                std::cout << "Event" << std::endl;
-
-            }
-            interpreter.pop();
-            interpreter.push(event);
-            return true;
-        }
-
-        if (!interpreter.stackTop().isSmallInt()) {
+    bool Primitives::terminalNextEvent(pimii::Interpreter& interpreter, pimii::System& sys,
+                                       pimii::SmallInteger argumentCount) {
+        if (argumentCount != 0) {
             return false;
         }
 
-        SmallInteger call = interpreter.stackTop().smallInt();
-        if (call == 0) {
-            ObjectPointer event = sys.popInputEvent();
-            interpreter.pop(2);
-            interpreter.push(event);
+        ObjectPointer event = sys.popInputEvent();
+        interpreter.pop();
+        interpreter.push(event);
+        return true;
+    }
 
-            return true;
+    bool Primitives::terminalSize(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 0) {
+            return false;
         }
 
+        ObjectPointer point = sys.memoryManager().makeObject(2, sys.typePoint());
+        SmallInteger x;
+        SmallInteger y;
+        getmaxyx(stdscr, y, x);
+
+        point[0] = x;
+        point[1] = y;
+        interpreter.pop();
+        interpreter.push(point);
+
+        return true;
+    }
+
+    bool Primitives::terminalShowString(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 3) {
+            return false;
+        }
+
+        ObjectPointer string = interpreter.pop();
+        ObjectPointer colorIndex = interpreter.pop();
+        ObjectPointer point = interpreter.pop();
+
+        if (!sys.is(point, sys.typePoint()) || !colorIndex.isSmallInt() || !sys.is(string, sys.typeString())) {
+            interpreter.unPop(3);
+            return false;
+        }
+
+        mvaddstr(point[1].smallInt(), point[0].smallInt(), string.stringView().data());
+        return true;
+    }
+
+    bool Primitives::terminalShowCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         return false;
+    }
+
+    bool Primitives::terminalHideCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        return false;
+    }
+
+    bool Primitives::terminalDraw(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 0) {
+            return false;
+        }
+
+        refresh();
+        return true;
     }
 
 }

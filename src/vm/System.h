@@ -60,6 +60,7 @@ namespace pimii {
         ObjectPointer linkType;
         ObjectPointer processType;
         ObjectPointer inputEventType;
+        ObjectPointer pointType;
 
         ObjectPointer trueValue;
         ObjectPointer falseValue;
@@ -161,6 +162,10 @@ namespace pimii {
 
         ObjectPointer typeLink() {
             return linkType;
+        };
+
+        ObjectPointer typePoint() {
+            return pointType;
         };
 
         ObjectPointer typeProcess() {
