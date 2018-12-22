@@ -70,13 +70,15 @@ namespace pimii {
 
         static bool sysOut(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static inline const std::array<Primitive, 34> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
+        static bool ncurses(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+
+        static inline const std::array<Primitive, 35> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
                                                                  greaterThanOrEqual, add, subtract, multiply, divide,
                                                                  remainder, basicNew, basicNewWith, clazz,
                                                                  value, value, value, value, valueWith,
                                                                  perform, perform, perform, perform, performWith, id,
                                                                  size, fork, wait, signal, at, atPut, asSymbol,
-                                                                 asString, concat, sysOut};
+                                                                 asString, concat, sysOut, ncurses};
 
 
     public:
@@ -120,6 +122,7 @@ namespace pimii {
         static inline const SmallInteger PRIMITIVE_AS_STRING = 31;
         static inline const SmallInteger PRIMITIVE_CONCAT = 32;
         static inline const SmallInteger PRIMITIVE_SYSOUT = 33;
+        static inline const SmallInteger PRIMITIVE_NCURSES = 34;
 
         static inline bool
         executePrimitive(SmallInteger index, Interpreter& interpreter, System& sys, SmallInteger argumentCount) {

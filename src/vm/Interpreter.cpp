@@ -30,22 +30,23 @@ namespace pimii {
         contextSwitchExpected = true;
 
         while (true) { //TODO for rootProcess done
-            if (!contextSwitchExpected && system.hasIRQ()) {
-                handlePendingIRQs();
+            if (!contextSwitchExpected && system.shouldNotifySemaphore()) {
+                notifySemaphores();
+            }
+
+            if (system.memoryManager().shouldRunRecommendedGC()) {
+                ObjectPointer currentProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+                if (currentProcess != Nil::NIL) {
+                    storeContextRegisters();
+                    currentProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
+                    system.memoryManager().runRecommendedGC();
+                    currentProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+                    activeContext = currentProcess[System::PROCESS_FIELD_CONTEXT];
+                    fetchContextRegisters();
+                }
             }
 
             if (contextSwitchExpected) {
-                if (system.memoryManager().shouldRunRecommendedGC()) {
-                    ObjectPointer currentProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
-                    if (currentProcess != Nil::NIL) {
-                        storeContextRegisters();
-                        currentProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
-                        system.memoryManager().runRecommendedGC();
-                        currentProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
-                        activeContext = currentProcess[System::PROCESS_FIELD_CONTEXT];
-                        fetchContextRegisters();
-                    }
-                }
                 handleContextSwitch();
             }
 
@@ -55,17 +56,18 @@ namespace pimii {
         }
     }
 
-    void Interpreter::handlePendingIRQs() {
-        if (system.isIRQ(IRQ_TIMER)) {
-            ObjectPointer irqTable = system.processor()[System::PROCESSOR_FIELD_IRQ_TABLE];
-            if (irqTable != Nil::NIL) {
-                ObjectPointer semaphore = irqTable[0];
-                if (semaphore != Nil::NIL) {
-                    signalSemaphore(semaphore);
-                }
-            }
+    void Interpreter::notifySemaphores() {
+        if (system.shouldNotifyTimerSemaphore()) {
+            ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_TIMER_SEMAPHORE];
+            signalSemaphore(semaphore);
         }
-        system.clearIRQ();
+
+        if (system.shouldNotifyInputSemaphore()) {
+            ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_INPUT_SEMAPHORE];
+            signalSemaphore(semaphore);
+        }
+
+        system.clearNotifications();
     }
 
     void Interpreter::handleContextSwitch() {
@@ -77,7 +79,7 @@ namespace pimii {
         ObjectPointer nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                                              System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
         while (nextProcess == Nil::NIL) {
-            if (system.memoryManager().shouldIdleGC()) {
+            if (activeContext != Nil::NIL && system.memoryManager().shouldIdleGC()) {
                 storeContextRegisters();
                 activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
                 system.memoryManager().idleGC();
@@ -86,9 +88,9 @@ namespace pimii {
                 fetchContextRegisters();
             }
             std::unique_lock<std::mutex> lock(irq_lock);
-            system.irgAvailable().wait(lock);
-            if (system.hasIRQ()) {
-                handlePendingIRQs();
+            system.didReceiveInterrupt().wait(lock);
+            if (system.shouldNotifySemaphore()) {
+                notifySemaphores();
             }
             nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                                    System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
@@ -96,7 +98,6 @@ namespace pimii {
 
         contextSwitchExpected = false;
         lastContextSwitch = std::chrono::steady_clock::now();
-        std::cout << "NEXT PROCESS " << nextProcess.hash() << std::endl;
 
         if (activeProcess != Nil::NIL) {
             activeProcess[System::PROCESS_FIELD_TIME] =
@@ -309,6 +310,7 @@ namespace pimii {
         ObjectPointer newMethod = findMethod(type, selector);
 
         if (newMethod == Nil::NIL) {
+            std::cout << selector.stringView() << std::endl;
             throw std::runtime_error("unknown method!");
         }
 
@@ -409,6 +411,10 @@ namespace pimii {
     }
 
     void Interpreter::signalSemaphore(ObjectPointer semaphore) {
+        if (semaphore == Nil::NIL) {
+            return;
+        }
+
         ObjectPointer firstWaitingProcess = popFront(semaphore, System::SEMAPHORE_FIELD_FIRST_WAITING_PROCESS,
                                                      System::SEMAPHORE_FIELD_LAST_WAITING_PROCESS);
 
@@ -487,8 +493,8 @@ namespace pimii {
 
         instuctionsPerSecond = instuctionsExecuted;
 
-        std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s, GC: "
-                  << system.memoryManager().gcMicros() << "us" << std::endl;
+    //    std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s, GC: "
+    //              << system.memoryManager().gcMicros() << "us" << std::endl;
         instuctionsExecuted = 0;
         activeMicros = 0;
         lastMetrics = std::chrono::steady_clock::now();

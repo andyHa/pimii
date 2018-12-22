@@ -215,7 +215,7 @@ namespace pimii {
             contextSwitchExpected = true;
         }
 
-        void handlePendingIRQs();
+        void notifySemaphores();
 
         void handleContextSwitch();
     };

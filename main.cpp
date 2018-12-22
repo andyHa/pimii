@@ -2,6 +2,7 @@
 #include <fstream>
 #include <thread>
 #include <stdlib.h>
+#include <ncurses.h>
 
 #include "src/vm/Interpreter.h"
 #include "src/vm/Primitives.h"
@@ -36,7 +37,7 @@ int main() {
 
     std::vector<pimii::Error> errors;
     pimii::Tokenizer tokenizer(
-            "[ [ true ] whileTrue: [ System log: 'T'. TimerSemaphore wait. ] ] fork. [ true ] whileTrue: [ true not ]",
+            "[ [ true ] whileTrue: [ InputSemaphore wait. System log: Terminal nextEvent key asString. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, pimii::Nil::NIL);
@@ -45,16 +46,29 @@ int main() {
 //    pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
     pimii::ObjectPointer context = sys.memoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
-                                                                     pimii::Nil::NIL);
+                                                                  pimii::Nil::NIL);
     context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
     context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
     context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     //interpreter.newActiveContext(context);
 
+    initscr();
+    cbreak();
+    noecho();
+
+    // Enables keypad mode. This makes (at least for me) mouse events getting
+    // reported as KEY_MOUSE, instead as of random letters.
+    keypad(stdscr, TRUE);
+
+    // Don't mask any mouse events
+    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+
+    printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
+
     std::thread([&sys]() {
         while (true) {
-            sys.irq(pimii::IRQ_TIMER);
+            sys.fireTimer();
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }).detach();
@@ -63,6 +77,13 @@ int main() {
         while (true) {
             interpreter.updateMetrics();
             std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }).detach();
+
+    std::thread([&sys]() {
+        while (true) {
+            int c = wgetch(stdscr);
+            sys.recordInputEvent(pimii::InputEvent::keyPressed(c));
         }
     }).detach();
 

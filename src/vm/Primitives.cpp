@@ -420,4 +420,32 @@ namespace pimii {
         return true;
     }
 
+    bool Primitives::ncurses(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount == 0) {
+            ObjectPointer event = sys.popInputEvent();
+            if (event != Nil::NIL) {
+                std::cout << "Event" << std::endl;
+
+            }
+            interpreter.pop();
+            interpreter.push(event);
+            return true;
+        }
+
+        if (!interpreter.stackTop().isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger call = interpreter.stackTop().smallInt();
+        if (call == 0) {
+            ObjectPointer event = sys.popInputEvent();
+            interpreter.pop(2);
+            interpreter.push(event);
+
+            return true;
+        }
+
+        return false;
+    }
+
 }

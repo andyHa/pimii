@@ -184,7 +184,7 @@ fork
 
 Class: ProcessScheduler
 Superclass: Object
-Instance Fields: activeProcess irqTable firstWaitingProcess lastWaitingProcess
+Instance Fields: activeProcess timerSemaphore inputSemaphore firstWaitingProcess lastWaitingProcess
 
 Class: Semaphore
 Superclass: Object
@@ -197,4 +197,24 @@ wait
 ------------------------
 signal
     <Primitive:27>
+------------------------
+
+Class: Terminal
+Superclass: Object
+Class Fields: root
+
+Class Methods: Terminal
+------------------------
+nextEvent
+    <Primitive:34>
+------------------------
+
+Class: InputEvent
+Superclass: Object
+Instance Fields: type key button col row
+
+Methods: InputEvent
+------------------------
+key
+    ^key.
 ------------------------

@@ -14,8 +14,29 @@
 
 namespace pimii {
 
-    enum Interrupt : uint8_t {
-        IRQ_TIMER = 0
+    enum InputEventType : SmallInteger {
+        KEY = 1, MOUSE_MOVE, MOUSE_DOWN = 2, MOUSE_UP = 3
+    };
+
+    struct InputEvent {
+        SmallInteger type;
+        SmallInteger key;
+        SmallInteger button;
+        SmallInteger col;
+        SmallInteger row;
+
+        InputEvent(SmallInteger type, SmallInteger key, SmallInteger button, SmallInteger col, SmallInteger row) : type(
+                type), key(key), button(button), col(col), row(row) {}
+
+        static InputEvent keyPressed(SmallInteger key) {
+            return {KEY, key, 0, 0, 0};
+        }
+
+        static InputEvent m(SmallInteger key) {
+            return {KEY, key, 0, 0, 0};
+        }
+
+
     };
 
     class System {
@@ -38,14 +59,19 @@ namespace pimii {
         ObjectPointer compiledMethodType;
         ObjectPointer linkType;
         ObjectPointer processType;
+        ObjectPointer inputEventType;
 
         ObjectPointer trueValue;
         ObjectPointer falseValue;
         ObjectPointer proc;
 
         ObjectPointer specialSelectorArray;
-        std::bitset<8> irqs;
-        std::condition_variable irq_available;
+
+        bool notifyTimerSemaphore;
+        bool notifyInputSemaphore;
+        std::mutex inputEventsMutex;
+        std::deque<InputEvent> inputEvents;
+        std::condition_variable interruptReceived;
 
 
         static constexpr SmallInteger NUMBER_OF_SPECIAL_SELECTORS = 35;
@@ -65,10 +91,11 @@ namespace pimii {
         static inline const SmallInteger TYPE_SIZE = 7;
 
         static constexpr SmallInteger PROCESSOR_FIELD_ACTIVE_PROCESS = 0;
-        static constexpr SmallInteger PROCESSOR_FIELD_IRQ_TABLE = 1;
-        static constexpr SmallInteger PROCESSOR_FIELD_FIRST_WAITING_PROCESS = 2;
-        static constexpr SmallInteger PROCESSOR_FIELD_LAST_WAITING_PROCESS = 3;
-        static constexpr SmallInteger PROCESSOR_SIZE = 4;
+        static constexpr SmallInteger PROCESSOR_FIELD_TIMER_SEMAPHORE = 1;
+        static constexpr SmallInteger PROCESSOR_FIELD_INPUT_SEMAPHORE = 2;
+        static constexpr SmallInteger PROCESSOR_FIELD_FIRST_WAITING_PROCESS = 3;
+        static constexpr SmallInteger PROCESSOR_FIELD_LAST_WAITING_PROCESS = 4;
+        static constexpr SmallInteger PROCESSOR_SIZE = 5;
 
         static constexpr SmallInteger PROCESS_FIELD_CONTEXT = 0;
         static constexpr SmallInteger PROCESS_FIELD_TIME = 1;
@@ -86,7 +113,7 @@ namespace pimii {
         System();
 
         ObjectPointer makeType(ObjectPointer parent, const std::string& name, SmallInteger effectiveFixedFields,
-                               SmallInteger effetiveFixedClassFields);
+                               SmallInteger effectiveFixedClassFields);
 
         MemoryManager& memoryManager() {
             return mm;
@@ -181,25 +208,61 @@ namespace pimii {
 
         bool is(ObjectPointer instance, ObjectPointer type);
 
-        void irq(Interrupt interrupt) {
-            irqs[interrupt] = true;
-            irq_available.notify_one();
+        void fireTimer() {
+            if (!notifyTimerSemaphore) {
+                notifyTimerSemaphore = true;
+                interruptReceived.notify_one();
+            }
         }
 
-        bool hasIRQ() {
-            return irqs.any();
+        void recordInputEvent(InputEvent event) {
+            std::lock_guard<std::mutex> lock(inputEventsMutex);
+
+            inputEvents.push_back(event);
+            if (!notifyInputSemaphore) {
+                notifyInputSemaphore = true;
+                interruptReceived.notify_one();
+            }
         }
 
-        void clearIRQ() {
-            irqs[0] = false;
+        ObjectPointer popInputEvent() {
+            std::lock_guard<std::mutex> lock(inputEventsMutex);
+            if (inputEvents.empty()) {
+                return Nil::NIL;
+            }
+
+            InputEvent sourceEvent = inputEvents.front();
+            inputEvents.pop_front();
+
+            ObjectPointer result = mm.makeObject(5, inputEventType);
+            result[0] = sourceEvent.type;
+            result[1] = sourceEvent.key;
+            result[2] = sourceEvent.button;
+            result[3] = sourceEvent.col;
+            result[4] = sourceEvent.row;
+
+            return result;
         }
 
-        bool isIRQ(Interrupt interrupt) {
-            return irqs[interrupt];
+        bool shouldNotifySemaphore() {
+            return notifyTimerSemaphore || notifyInputSemaphore;
         }
 
-        std::condition_variable& irgAvailable() {
-            return irq_available;
+        bool shouldNotifyTimerSemaphore() {
+            return notifyTimerSemaphore;
+        }
+
+        bool shouldNotifyInputSemaphore() {
+            return notifyInputSemaphore;
+        }
+
+        void clearNotifications() {
+            notifyTimerSemaphore = false;
+            notifyInputSemaphore = false;
+        }
+
+        std::condition_variable& didReceiveInterrupt() {
+            return interruptReceived;
         }
     };
 

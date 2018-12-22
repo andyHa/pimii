@@ -26,6 +26,7 @@ namespace pimii {
               compiledMethodType(mm.makeRootObject(TYPE_SIZE + 1, Nil::NIL)),
               linkType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               processType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+              inputEventType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               trueValue(mm.makeRootObject(0, Nil::NIL)),
               falseValue(mm.makeRootObject(0, Nil::NIL)),
               proc(mm.makeRootObject(PROCESSOR_SIZE, Nil::NIL)),
@@ -102,6 +103,9 @@ namespace pimii {
         // Create "Process"
         completeType(processType, objectType, "Process", 1);
 
+        // Create "InputEvent"
+        completeType(inputEventType, objectType, "InputEvent", 5);
+
         ObjectPointer symbolTableType = makeType(objectType, "SymbolTable", 2, TYPE_SIZE);
         symbols.installTypes(symbolTableType, arrayType, symbolType);
 
@@ -166,24 +170,26 @@ namespace pimii {
         proc.type(processSchedulerType);
         dictionary.atPut(symbols.lookup("Processor"), proc);
 
-        ObjectPointer irqs = mm.makeObject(10, arrayType);
-        proc[System::PROCESSOR_FIELD_IRQ_TABLE] = irqs;
-
         ObjectPointer semaphoreType = makeType(objectType, "Semaphore", System::SEMAPHORE_SIZE, TYPE_SIZE);
         ObjectPointer timerSemaphore = mm.makeObject(System::SEMAPHORE_SIZE, semaphoreType);
-        irqs[0] = timerSemaphore;
         timerSemaphore[SEMAPHORE_FIELD_EXCESS_SIGNALS] = 0;
+        proc[System::PROCESSOR_FIELD_TIMER_SEMAPHORE] = timerSemaphore;
         dictionary.atPut(symbols.lookup("TimerSemaphore"), timerSemaphore);
+
+        ObjectPointer inputSemaphore = mm.makeObject(System::SEMAPHORE_SIZE, semaphoreType);
+        inputSemaphore[SEMAPHORE_FIELD_EXCESS_SIGNALS] = 0;
+        proc[System::PROCESSOR_FIELD_INPUT_SEMAPHORE] = inputSemaphore;
+        dictionary.atPut(symbols.lookup("InputSemaphore"), inputSemaphore);
     }
 
 
     ObjectPointer System::makeType(ObjectPointer parent, const std::string& name, SmallInteger effectiveFixedFields,
-                                   SmallInteger effetiveFixedClassFields) {
+                                   SmallInteger effectiveFixedClassFields) {
         ObjectPointer metaType = mm.makeObject(TYPE_SIZE, metaClassType);
-        ObjectPointer type = mm.makeObject(effetiveFixedClassFields, ObjectPointer(metaType));
+        ObjectPointer type = mm.makeObject(effectiveFixedClassFields, ObjectPointer(metaType));
         metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
         metaType[TYPE_FIELD_SUPERTYPE] = parent.type();
-        metaType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = effetiveFixedClassFields;
+        metaType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = effectiveFixedClassFields;
         type[TYPE_FIELD_NAME] = symbols.lookup(name);
         type[TYPE_FIELD_SUPERTYPE] = parent;
         type[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = effectiveFixedFields;

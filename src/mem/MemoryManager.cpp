@@ -37,35 +37,24 @@ namespace pimii {
     }
 
     ObjectPointer MemoryManager::makeString(std::string_view string, ObjectPointer type) {
-        //TODO size check
-        auto byteLength = (SmallInteger) (string.size() + 1);
+        auto byteLength = SmallIntegers::toSmallInteger(string.size() + 1);
         ObjectPointer obj = makeBuffer(byteLength, type);
 
         obj.loadFrom(string.data(), byteLength);
         return obj;
     }
 
-    void MemoryManager::gc(bool shouldCollectBuffers) {
-        collectBuffers = shouldCollectBuffers;
-
-        std::cout << "Objects-Size: " << activeObjects->usedWords() << std::endl;
-        std::cout << "Objects-Count: " << activeObjects->objectCount() << std::endl;
-        std::cout << "Buffers-Size: " << buffers->usedWords() << std::endl;
-        std::cout << "Buffers-Count: " << buffers->objectCount() << std::endl;
-        std::cout << "Root-Size: " << rootAllocator->usedWords() << std::endl;
-        std::cout << "Root-Count: " << rootAllocator->objectCount() << std::endl;
-        std::unique_ptr<Allocator> garbageBuffers;
+    void MemoryManager::gc() {
+        std::deque<ObjectPointer> gcWork;
+        std::unique_ptr<Allocator> garbageBuffers = std::move(buffers);
         std::unique_ptr<Allocator> garbageObjects = std::move(activeObjects);
-        activeObjects = std::make_unique<Allocator>(maxSegmentsPerPool);
 
-        if (collectBuffers) {
-            garbageBuffers = std::move(buffers);
-            buffers = std::make_unique<Allocator>(maxSegmentsPerPool);
-        }
+        activeObjects = std::make_unique<Allocator>(maxSegmentsPerPool);
+        buffers = std::make_unique<Allocator>(maxSegmentsPerPool);
 
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         for (auto root : rootObjects) {
-            translateObject(root);
+            translateObject(root, gcWork);
         }
 
         int objectsMoved = 0;
@@ -73,7 +62,7 @@ namespace pimii {
             ObjectPointer obj = gcWork.front();
             gcWork.pop_front();
 
-            translateObject(obj);
+            translateObject(obj, gcWork);
             objectsMoved++;
         }
 
@@ -89,20 +78,10 @@ namespace pimii {
 
         gcDurationMicros += std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
         gcCounter++;
-        std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()
-                  << "us, Moved: " << objectsMoved
-                  << std::endl;
-
-        std::cout << "Objects-Size: " << activeObjects->usedWords() << std::endl;
-        std::cout << "Objects-Count: " << activeObjects->objectCount() << std::endl;
-        std::cout << "Buffers-Size: " << buffers->usedWords() << std::endl;
-        std::cout << "Buffers-Count: " << buffers->objectCount() << std::endl;
-        std::cout << "Root-Size: " << rootAllocator->usedWords() << std::endl;
-        std::cout << "Root-Count: " << rootAllocator->objectCount() << std::endl;
     }
 
 
-    ObjectPointer MemoryManager::copyObject(ObjectPointer obj) {
+    ObjectPointer MemoryManager::copyObject(ObjectPointer obj, std::deque<ObjectPointer>& gcWork) {
         obj.gcInfo(STATE_FULLY_MOVED);
         ObjectPointer copy = makeObject(obj.size(), obj.type());
         obj.transferFieldsTo(0, copy, 0, obj.size());
@@ -113,15 +92,9 @@ namespace pimii {
         return copy;
     }
 
-    ObjectPointer MemoryManager::copyBuffer(ObjectPointer buffer) {
+    ObjectPointer MemoryManager::copyBuffer(ObjectPointer buffer, std::deque<ObjectPointer>& gcWork) {
         buffer.gcInfo(STATE_FULLY_MOVED);
-
-        if (!collectBuffers) {
-            buffer.type(translateField(buffer.type()));
-            return buffer;
-        }
-
-        ObjectPointer copy = makeBuffer(buffer.byteSize(), translateField(buffer.type()));
+        ObjectPointer copy = makeBuffer(buffer.byteSize(), translateField(buffer.type(), gcWork));
         buffer.transferBytesTo(0, copy, 0, buffer.byteSize());
         copy.gcInfo(STATE_ORIGINAL);
 
@@ -130,18 +103,18 @@ namespace pimii {
         return copy;
     }
 
-    void MemoryManager::translateObject(ObjectPointer obj) {
+    void MemoryManager::translateObject(ObjectPointer obj, std::deque<ObjectPointer>& gcWork) {
         if (obj.gcInfo() == STATE_PARTIALLY_MOVED) {
             obj.gcInfo(STATE_ORIGINAL);
         }
 
-        obj.type(translateField(obj.type()));
+        obj.type(translateField(obj.type(), gcWork));
         for (SmallInteger i = 0; i < obj.size(); i++) {
-            obj[i] = translateField(obj[i]);
+            obj[i] = translateField(obj[i], gcWork);
         }
     }
 
-    ObjectPointer MemoryManager::translateField(ObjectPointer field) {
+    ObjectPointer MemoryManager::translateField(ObjectPointer field, std::deque<ObjectPointer>& gcWork) {
         if (field.isSmallInt() || field.isDecimal() || field == Nil::NIL) {
             return field;
         }
@@ -149,9 +122,9 @@ namespace pimii {
         char gcInfo = field.gcInfo();
         if (gcInfo == STATE_ORIGINAL) {
             if (field.isObject()) {
-                return copyObject(field);
+                return copyObject(field, gcWork);
             } else if (field.isBuffer()) {
-                return copyBuffer(field);
+                return copyBuffer(field, gcWork);
             }
         } else if (gcInfo == STATE_PARTIALLY_MOVED || gcInfo == STATE_FULLY_MOVED) {
             return field.gcSuccessor();
@@ -167,6 +140,6 @@ namespace pimii {
     }
 
     void MemoryManager::idleGC() {
-        gc(true);
+        gc();
     }
 }

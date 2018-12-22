@@ -30,23 +30,21 @@ namespace pimii {
         SmallInteger gcDurationMicros;
         SmallInteger gcCounter;
 
-        bool collectBuffers;
-        std::deque<ObjectPointer> gcWork;
 
         static constexpr char STATE_ORIGINAL = 0;
         static constexpr char STATE_PARTIALLY_MOVED = 1;
         static constexpr char STATE_FULLY_MOVED = 2;
         static constexpr char STATE_ROOT = 3;
 
-        void gc(bool shoudCollectBuffers);
+        void gc();
 
-        ObjectPointer copyObject(ObjectPointer obj);
+        ObjectPointer copyObject(ObjectPointer obj, std::deque<ObjectPointer>& gcWork);
 
-        ObjectPointer copyBuffer(ObjectPointer buffer);
+        ObjectPointer copyBuffer(ObjectPointer buffer, std::deque<ObjectPointer>& gcWork);
 
-        void translateObject(ObjectPointer obj);
+        void translateObject(ObjectPointer obj, std::deque<ObjectPointer>& gcWork);
 
-        ObjectPointer translateField(ObjectPointer field);
+        ObjectPointer translateField(ObjectPointer field, std::deque<ObjectPointer>& gcWork);
 
     public:
         MemoryManager(Word maxSegmentsPerPool) : maxSegmentsPerPool(maxSegmentsPerPool),
@@ -68,7 +66,7 @@ namespace pimii {
         }
 
         void runRecommendedGC() {
-            gc(buffers->numberOfSegments() > buffersHighWaterMark);
+            gc();
         }
 
         ObjectPointer makeRootObject(SmallInteger numberOfFields, ObjectPointer type);
@@ -80,6 +78,7 @@ namespace pimii {
 
             auto* buffer = activeObjects->alloc(numberOfFields + 2);
             if (buffer == nullptr) {
+                std::cout << activeObjects->numberOfSegments() << " /" << activeObjects->objectCount() << std::endl;
                 throw std::runtime_error("Overflow of heap space: objects");
             }
 
