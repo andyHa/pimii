@@ -18,12 +18,14 @@ namespace pimii {
 
         SmallInteger offset = ctx.findTemporaryIndex(name);
         if (offset >= 0) {
+            ctx.pushSingle(Interpreter::OP_DUPLICAE_STACK_TOP);
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_TEMPORARY, offset);
             return;
         }
 
         offset = ctx.findFieldIndex(name);
         if (offset >= 0) {
+            ctx.pushSingle(Interpreter::OP_DUPLICAE_STACK_TOP);
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_RECEIVER_FIELD, offset);
             return;
         }
@@ -32,6 +34,7 @@ namespace pimii {
             auto symbol = ctx.getSystem().symbolTable().lookup(name);
             auto association = ObjectPointer(ctx.getSystem().systemDictionary().at(symbol));
             SmallInteger index = ctx.findOrAddLiteral(association);
+            ctx.pushSingle(Interpreter::OP_DUPLICAE_STACK_TOP);
             ctx.pushWithIndex(Interpreter::OP_POP_AND_STORE_IN_LITERAL_VARIABLE, index);
         }
 
@@ -251,7 +254,8 @@ namespace pimii {
             } else if (arguments.size() == 2) {
                 ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS, specialSelectorIndex);
             } else {
-                ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS, (int) arguments.size());
+                ctx.pushWithIndex(Interpreter::OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS, (SmallInteger) arguments.size());
+                ctx.pushSingle((uint8_t) specialSelectorIndex);
             }
 
             return;

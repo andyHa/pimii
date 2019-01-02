@@ -135,6 +135,66 @@ namespace pimii {
         return true;
     }
 
+
+    bool Primitives::bitAnd(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
+            !interpreter.stackValue(1).isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger arg = interpreter.pop().smallInt();
+        SmallInteger self = interpreter.pop().smallInt();
+        interpreter.push(ObjectPointer::forSmallInt(self & arg));
+        return true;
+    }
+
+    bool Primitives::bitOr(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
+            !interpreter.stackValue(1).isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger arg = interpreter.pop().smallInt();
+        SmallInteger self = interpreter.pop().smallInt();
+        interpreter.push(ObjectPointer::forSmallInt(self | arg));
+        return true;
+    }
+
+    bool Primitives::bitInvert(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 0 || !interpreter.stackTop().isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger self = interpreter.pop().smallInt();
+        interpreter.push(ObjectPointer::forSmallInt(~self));
+        return true;
+    }
+
+    bool Primitives::shiftLeft(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
+            !interpreter.stackValue(1).isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger arg = interpreter.pop().smallInt();
+        SmallInteger self = interpreter.pop().smallInt();
+        interpreter.push(ObjectPointer::forSmallInt(self << arg));
+        return true;
+    }
+
+    bool Primitives::shiftRight(pimii::Interpreter& interpreter, pimii::System& sys,
+                                pimii::SmallInteger argumentCount) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
+            !interpreter.stackValue(1).isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger arg = interpreter.pop().smallInt();
+        SmallInteger self = interpreter.pop().smallInt();
+        interpreter.push(ObjectPointer::forSmallInt(self >> arg));
+        return true;
+    }
+
     bool Primitives::basicNew(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 0) {
             return false;
@@ -151,17 +211,102 @@ namespace pimii {
     }
 
     bool Primitives::basicNewWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt()) {
             return false;
         }
 
         SmallInteger size = interpreter.pop().smallInt();
         ObjectPointer type = interpreter.pop();
-        //ensure type
+        //TODO ensure type
         ObjectPointer result = sys.memoryManager().makeObject(
                 type[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + size, type);
 
         interpreter.push(result);
+
+        return true;
+    }
+
+
+    bool Primitives::basicAllocWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger size = interpreter.pop().smallInt();
+        ObjectPointer type = interpreter.pop();
+        //TODO ensure type
+        //TODO type[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] == 0
+        ObjectPointer result = sys.memoryManager().makeBuffer(size, type);
+
+        interpreter.push(result);
+
+        return true;
+    }
+
+    bool Primitives::byteAt(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer value = interpreter.pop();
+
+        interpreter.push(ObjectPointer::forSmallInt(value.fetchByte(index)));
+        return true;
+    }
+
+    bool Primitives::byteAtPut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 2 || !interpreter.stackTop().isSmallInt() || !interpreter.stackValue(1).isSmallInt()) {
+            return false;
+        }
+
+        SmallInteger byte = interpreter.pop().smallInt();
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        if (byte < 0 || byte > 255) {
+            throw std::range_error("byte value out of range!");
+        }
+        ObjectPointer value = interpreter.stackTop();
+        value.storeByte(index, (char) byte);
+
+        return true;
+    }
+
+    bool Primitives::transferBytes(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 4) {
+            return false;
+        }
+
+        SmallInteger length = interpreter.pop().smallInt();
+        SmallInteger destIndex = interpreter.pop().smallInt() -1;
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer dest = interpreter.pop();
+        ObjectPointer self = interpreter.stackTop();
+
+        self.transferBytesTo(index, dest, destIndex, length);
+
+        return true;
+    }
+
+    bool Primitives::compareBytes(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1) {
+            return false;
+        }
+
+        ObjectPointer other = interpreter.pop();
+        ObjectPointer self = interpreter.pop();
+        interpreter.push(ObjectPointer::forSmallInt(self.compareTo(other)));
+
+        return true;
+    }
+
+    bool Primitives::hashBytes(pimii::Interpreter& interpreter, pimii::System& sys,
+                               pimii::SmallInteger argumentCount) {
+        if (argumentCount != 0) {
+            return false;
+        }
+
+        ObjectPointer self = interpreter.pop();
+        interpreter.push(ObjectPointer::forSmallInt(self.hash()));
 
         return true;
     }
@@ -181,7 +326,7 @@ namespace pimii {
             return false;
         }
 
-        interpreter.push(ObjectPointer::forSmallInt(interpreter.pop().hash()));
+        interpreter.push(ObjectPointer::forSmallInt(interpreter.pop().id()));
         return true;
     }
 
@@ -191,7 +336,7 @@ namespace pimii {
         }
 
         ObjectPointer self = interpreter.pop();
-        if (self.isSmallInt()) {
+        if (self.isSmallInt() || self == Nil::NIL) {
             interpreter.push(ObjectPointer::forSmallInt(0));
             return true;
         } else if (self.isObject()) {
@@ -206,29 +351,50 @@ namespace pimii {
         return false;
     }
 
+    bool Primitives::objectSize(pimii::Interpreter& interpreter, pimii::System& sys,
+                                pimii::SmallInteger argumentCount) {
+        if (argumentCount != 0) {
+            return false;
+        }
+
+        ObjectPointer self = interpreter.pop();
+        if (self.isSmallInt() || self == Nil::NIL) {
+            interpreter.push(ObjectPointer::forSmallInt(0));
+            return true;
+        } else if (self.isObject()) {
+            interpreter.push(ObjectPointer::forSmallInt(self.size()));
+            return true;
+        } else if (self.isBuffer()) {
+            interpreter.push(ObjectPointer::forSmallInt(self.byteSize()));
+            return true;
+        }
+
+        return false;
+    }
+
     bool Primitives::value(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         ObjectPointer blockContext = interpreter.stackValue(argumentCount);
         // This primitive can only handle BlockContexts
-        if (!blockContext.isObject() ||
+        if (blockContext == Nil::NIL || !blockContext.isObject() ||
             blockContext.type() != sys.typeBlockContext()) {
             return false;
         }
 
-        SmallInteger blockArgumentCount = blockContext[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].smallInt();
+        SmallInteger blockArgumentCount = blockContext[System::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].smallInt();
         if (blockArgumentCount != argumentCount) {
             return false;
         }
 
         interpreter.currentActiveContext().transferFieldsTo(
                 interpreter.basePointer() + interpreter.stackPointer() - argumentCount, blockContext,
-                Interpreter::CONTEXT_FIXED_SIZE, argumentCount);
+                System::CONTEXT_FIXED_SIZE, argumentCount);
 
         interpreter.pop(argumentCount + 1);
 
-        blockContext[Interpreter::CONTEXT_IP_FIELD] =
-                blockContext[Interpreter::CONTEXT_INITIAL_IP_FIELD].smallInt();
-        blockContext[Interpreter::CONTEXT_SP_FIELD] = argumentCount;
-        blockContext[Interpreter::CONTEXT_CALLER_FIELD] = interpreter.currentActiveContext();
+        blockContext[System::CONTEXT_IP_FIELD] =
+                blockContext[System::CONTEXT_INITIAL_IP_FIELD].smallInt();
+        blockContext[System::CONTEXT_SP_FIELD] = argumentCount;
+        blockContext[System::CONTEXT_CALLER_FIELD] = interpreter.currentActiveContext();
 
         interpreter.newActiveContext(blockContext);
 
@@ -248,118 +414,114 @@ namespace pimii {
     }
 
     bool Primitives::at(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        return false;
+        if (argumentCount != 1) {
+            return false;
+        }
+
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer self = interpreter.pop();
+        interpreter.push(self[self.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + index]);
+
+        return true;
     }
 
     bool Primitives::atPut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        return false;
-    }
-
-    bool Primitives::asSymbol(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 0) {
+        if (argumentCount != 2) {
             return false;
         }
 
-        ObjectPointer self = interpreter.pop();
-        if (!sys.is(self, sys.typeString())) {
-            interpreter.unPop(1);
-            return false;
-        }
-
-        interpreter.push(sys.symbolTable().lookup(self.stringView()));
-        return true;
-    }
-
-    bool Primitives::asString(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 0) {
-            return false;
-        }
-
-        ObjectPointer self = interpreter.pop();
-        if (!sys.is(self, sys.typeSymbol())) {
-            interpreter.unPop(1);
-            return false;
-        }
-
-        ObjectPointer result = sys.memoryManager().makeBuffer(self.byteSize(), sys.typeString());
-        self.transferBytesTo(0, result, 0, self.byteSize());
-
-        interpreter.push(result);
+        ObjectPointer value = interpreter.pop();
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer self = interpreter.stackTop();
+        self[self.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + index] = value;
 
         return true;
     }
 
-    bool Primitives::concat(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+    bool Primitives::transfer(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 4) {
+            return false;
+        }
+
+        SmallInteger length = interpreter.pop().smallInt();
+        SmallInteger destIndex = interpreter.pop().smallInt() - 1;
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer dest = interpreter.pop();
+        //TODO ensure value range
+        ObjectPointer self = interpreter.stackTop();
+        self.transferFieldsTo(self.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + index, dest,
+                              dest.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + destIndex, length);
+
+        return true;
+    }
+
+    bool Primitives::objectAt(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
         if (argumentCount != 1) {
             return false;
         }
 
-        ObjectPointer arg = interpreter.pop();
+        SmallInteger index = interpreter.pop().smallInt() - 1;
         ObjectPointer self = interpreter.pop();
-
-        if (arg == Nil::NIL) {
-            interpreter.push(self);
-            return true;
-        }
-
-        if (!sys.is(arg, sys.typeString())) {
-            interpreter.unPop(2);
-            return false;
-        }
-
-        if (!sys.is(self, sys.typeString())) {
-            interpreter.unPop(2);
-            return false;
-        }
-
-        ObjectPointer result = sys.memoryManager().makeString(
-                std::string(self.stringView()) + std::string(arg.stringView()),
-                sys.typeString());
-
-        interpreter.push(result);
+        interpreter.push(self[index]);
 
         return true;
     }
 
-    bool Primitives::sysOut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1) {
+    bool Primitives::objectAtPut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 2) {
             return false;
         }
 
-        ObjectPointer arg = interpreter.pop();
+        ObjectPointer value = interpreter.pop();
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer self = interpreter.stackTop();
+        self[index] = value;
 
-        if (!sys.is(arg, sys.typeString())) {
-            interpreter.unPop(1);
+        return true;
+    }
+
+    bool Primitives::objectTransfer(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 4) {
             return false;
         }
 
-        std::cout << arg.stringView() << std::endl;
+        SmallInteger length = interpreter.pop().smallInt();
+        SmallInteger destIndex = interpreter.pop().smallInt() - 1;
+        SmallInteger index = interpreter.pop().smallInt() - 1;
+        ObjectPointer dest = interpreter.pop();
+        //TODO ensure value range
+        ObjectPointer self = interpreter.stackTop();
+        self.transferFieldsTo(index, dest, destIndex, length);
+
         return true;
     }
 
     bool Primitives::fork(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 0) {
+        if (argumentCount != 1) {
             return false;
         }
 
-        ObjectPointer blockContext = interpreter.stackValue(argumentCount);
+        ObjectPointer name = interpreter.pop();
+        ObjectPointer blockContext = interpreter.pop();
         // This primitive can only handle BlockContexts
         if (!blockContext.isObject() ||
             blockContext.type() != sys.typeBlockContext()) {
+            interpreter.unPop(2);
             return false;
         }
 
-        SmallInteger blockArgumentCount = blockContext[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].smallInt();
+        SmallInteger blockArgumentCount = blockContext[System::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].smallInt();
         if (blockArgumentCount != 0) {
+            interpreter.unPop(2);
             return false;
         }
 
         interpreter.pop(argumentCount);
 
-        blockContext[Interpreter::CONTEXT_IP_FIELD] =
-                blockContext[Interpreter::CONTEXT_INITIAL_IP_FIELD].smallInt();
-        blockContext[Interpreter::CONTEXT_SP_FIELD] = argumentCount;
-        blockContext[Interpreter::CONTEXT_CALLER_FIELD] = Nil::NIL;
+        blockContext[System::CONTEXT_IP_FIELD] =
+                blockContext[System::CONTEXT_INITIAL_IP_FIELD].smallInt();
+        blockContext[System::CONTEXT_SP_FIELD] = argumentCount;
+        blockContext[System::CONTEXT_CALLER_FIELD] = Nil::NIL;
         // TODO maybe clone HOME_CONTEXT and maybe even the block-context itself(?)
 
         ObjectPointer process = sys.memoryManager().makeObject(System::PROCESS_SIZE, sys.typeProcess());
@@ -465,7 +627,8 @@ namespace pimii {
             return false;
         }
 
-        mvaddstr(point[1].smallInt(), point[0].smallInt(), string.stringView().data());
+        std::cout <<  string.stringView() << std::endl;
+        //mvaddstr(point[1].smallInt(), point[0].smallInt(), string.stringView().data());
         return true;
     }
 
@@ -485,5 +648,6 @@ namespace pimii {
         refresh();
         return true;
     }
+
 
 }

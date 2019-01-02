@@ -17,7 +17,7 @@ namespace pimii {
               objectType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               smallIntType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               symbolType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
-              stringType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+              stringType(mm.makeRootObject(TYPE_SIZE + 1, Nil::NIL)),
               associationType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               arrayType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               byteArrayType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
@@ -28,10 +28,11 @@ namespace pimii {
               processType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               inputEventType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               pointType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
+              characterType(mm.makeRootObject(TYPE_SIZE + 1, Nil::NIL)),
               trueValue(mm.makeRootObject(0, Nil::NIL)),
               falseValue(mm.makeRootObject(0, Nil::NIL)),
               proc(mm.makeRootObject(PROCESSOR_SIZE, Nil::NIL)),
-              specialSelectorArray(mm.makeRootObject(NUMBER_OF_SPECIAL_SELECTORS, Nil::NIL)) {
+              specialSelectorArray(mm.makeRootObject(LAST_PREFERRED_PRIMITIVE_INDEX + 15, Nil::NIL)) {
 
 
         // Create "MetaClass class"
@@ -67,55 +68,66 @@ namespace pimii {
         metaClassClassType[TYPE_FIELD_SUPERTYPE] = behaviourType.type();
 
         // Create "Class"
-        completeType(classType, behaviourType, "Class", TYPE_SIZE);
+        completeType(classType, behaviourType, "Class", TYPE_SIZE, TYPE_SIZE);
 
         // Make "Class" the superclass of "Object class"
         objectClassClassType[TYPE_FIELD_SUPERTYPE] = classType;
 
         // Create "Nil"
-        completeType(nilType, objectType, "Nil", 0);
+        completeType(nilType, objectType, "Nil", TYPE_SIZE, 0);
 
         // Create "SmallInt"
-        completeType(smallIntType, objectType, "SmallInteger", 0);
+        completeType(smallIntType, objectType, "SmallInteger", TYPE_SIZE, 0);
 
         // Create "Symbol"
-        completeType(symbolType, objectType, "Symbol", 0);
+        completeType(symbolType, objectType, "Symbol", TYPE_SIZE, 0);
 
         // Create "String"
-        completeType(stringType, objectType, "String", 0);
+        completeType(stringType, objectType, "String", TYPE_SIZE + 1, 0);
+        stringType[STRING_TYPE_EMPTY_STRING_FIELD] = mm.makeBuffer(0, stringType);
 
         // Create "Association"
-        completeType(associationType, objectType, "Association", SystemDictionary::ASSOCIATION_SIZE);
+        completeType(associationType, objectType, "Association", TYPE_SIZE, System::ASSOCIATION_SIZE);
 
         // Create "CompiledMethod"
-        completeType(compiledMethodType, objectType, "CompiledMethod", Interpreter::COMPILED_METHOD_SIZE);
+        completeType(compiledMethodType, objectType, "CompiledMethod", TYPE_SIZE + 1, COMPILED_METHOD_SIZE);
 
         // Create "MethodContext" and "BlockContext"
-        completeType(blockContextType, objectType, "BlockContext", Interpreter::CONTEXT_FIXED_SIZE);
-        completeType(methodContextType, objectType, "MethodContext", Interpreter::CONTEXT_FIXED_SIZE);
+        completeType(blockContextType, objectType, "BlockContext", TYPE_SIZE, CONTEXT_FIXED_SIZE);
+        completeType(methodContextType, objectType, "MethodContext", TYPE_SIZE, CONTEXT_FIXED_SIZE);
 
         // Create "Array"
-        completeType(arrayType, objectType, "Array", 0);
-        completeType(byteArrayType, objectType, "ByteArray", 0);
+        completeType(arrayType, objectType, "Array", TYPE_SIZE, 0);
+        completeType(byteArrayType, objectType, "ByteArray", TYPE_SIZE, 0);
 
         // Create "Link"
-        completeType(linkType, objectType, "Link", 2);
+        completeType(linkType, objectType, "Link", TYPE_SIZE, 2);
 
         // Create "Process"
-        completeType(processType, objectType, "Process", 1);
+        completeType(processType, objectType, "Process", TYPE_SIZE, 1);
 
         // Create "InputEvent"
-        completeType(inputEventType, objectType, "InputEvent", 5);
+        completeType(inputEventType, objectType, "InputEvent", TYPE_SIZE, 5);
 
         // Create "Point"
-        completeType(pointType, objectType, "Point", 2);
+        completeType(pointType, objectType, "Point", TYPE_SIZE, 2);
+
+        // Create "Character"
+        completeType(characterType, objectType, "Character", TYPE_SIZE + 1, 1);
+        characterType[TYPE_SIZE] = mm.makeRootObject(256, arrayType);
+        for (SmallInteger i = 0; i <= 255; i++) {
+            ObjectPointer character = mm.makeRootObject(1, characterType);
+            character[0] = i;
+            characterType[TYPE_SIZE][i] = character;
+        }
 
         ObjectPointer symbolTableType = makeType(objectType, "SymbolTable", 2, TYPE_SIZE);
         symbols.installTypes(symbolTableType, arrayType, symbolType);
 
-        ObjectPointer systemDictionaryType = makeType(objectType, "SystemDictionary", 2,
+        ObjectPointer systemDictionaryType = makeType(objectType, "IdentityDictionary", 2,
                                                       TYPE_SIZE);
         dictionary.installTypes(systemDictionaryType, arrayType, associationType);
+        dictionary.atPut(symbols.lookup("SmallTalk"), dictionary.getDictionary());
 
         // Setup booleans
         ObjectPointer trueType = makeType(objectType, "True", 0, TYPE_SIZE);
@@ -129,48 +141,65 @@ namespace pimii {
 
         // These special selectors will first call their assigned primitive (in Primitives.h) and only
         // send the selector if the primitive rejected execution.
-        specialSelectorArray[Primitives::PRIMITIVE_EQUALITY] = symbols.lookup("==");
-        specialSelectorArray[1] = symbols.lookup("<");
-        specialSelectorArray[2] = symbols.lookup("<=");
-        specialSelectorArray[3] = symbols.lookup(">");
-        specialSelectorArray[4] = symbols.lookup(">=");
-        specialSelectorArray[5] = symbols.lookup("+");
-        specialSelectorArray[6] = symbols.lookup("-");
-        specialSelectorArray[7] = symbols.lookup("*");
-        specialSelectorArray[8] = symbols.lookup("/");
-        specialSelectorArray[9] = symbols.lookup("%");
-        specialSelectorArray[10] = symbols.lookup("basicNew");
-        specialSelectorArray[11] = symbols.lookup("basicNew:");
-        specialSelectorArray[12] = symbols.lookup("class");
-        specialSelectorArray[13] = symbols.lookup("value");
-        specialSelectorArray[14] = symbols.lookup("value:");
-        specialSelectorArray[15] = symbols.lookup("value:value:");
-        specialSelectorArray[16] = symbols.lookup("value:value:value:");
-        specialSelectorArray[17] = symbols.lookup("withArgs:");
-        specialSelectorArray[18] = symbols.lookup("perform:");
-        specialSelectorArray[19] = symbols.lookup("perform:with:");
-        specialSelectorArray[20] = symbols.lookup("perform:with:and:");
-        specialSelectorArray[21] = symbols.lookup("perform:with:and:and:");
-        specialSelectorArray[22] = symbols.lookup("perform:withArgs:");
+        specialSelectorArray[PRIMITIVE_EQUALITY] = symbols.lookup("==");
+        specialSelectorArray[PRIMITIVE_LESS_THAN] = symbols.lookup("<");
+        specialSelectorArray[PRIMITIVE_LESS_THAN_OR_EQUAL] = symbols.lookup("<=");
+        specialSelectorArray[PRIMITIVE_GREATER_THAN] = symbols.lookup(">");
+        specialSelectorArray[PRIMITIVE_GREATER_THAN_OR_EQUAL] = symbols.lookup(">=");
+        specialSelectorArray[PRIMITIVE_ADD] = symbols.lookup("+");
+        specialSelectorArray[PRIMITIVE_SUBTRACT] = symbols.lookup("-");
+        specialSelectorArray[PRIMITIVE_MULTIPLY] = symbols.lookup("*");
+        specialSelectorArray[PRIMITIVE_DIVIDE] = symbols.lookup("//");
+        specialSelectorArray[PRIMITIVE_REMAINDER] = symbols.lookup("%");
+        specialSelectorArray[PRIMITIVE_BIT_AND] = symbols.lookup("bitAnd:");
+        specialSelectorArray[PRIMITIVE_BIT_OR] = symbols.lookup("bitOr:");
+        specialSelectorArray[PRIMITIVE_BIT_INVERT] = symbols.lookup("bitInvert");
+        specialSelectorArray[PRIMITIVE_SHIFT_LEFT] = symbols.lookup("<<");
+        specialSelectorArray[PRIMITIVE_SHIFT_RIGHT] = symbols.lookup(">>");
+        specialSelectorArray[PRIMITIVE_BASIC_NEW] = symbols.lookup("basicNew");
+        specialSelectorArray[PRIMITIVE_BASIC_NEW_WITH] = symbols.lookup("basicNew:");
+        specialSelectorArray[PRIMITIVE_BASIC_ALLOC_WITH] = symbols.lookup("basicAlloc:");
+        specialSelectorArray[PRIMITIVE_BYTE_AT] = symbols.lookup("byteAt:");
+        specialSelectorArray[PRIMITIVE_BYTE_AT_PUT] = symbols.lookup("byteAtPut:");
+        specialSelectorArray[PRIMITIVE_TRANSFER_BYTES] = symbols.lookup(
+                "transferBytesTo:index:destIndex:length:");
+        specialSelectorArray[PRIMITIVE_COMPARE_BYTES] = symbols.lookup("compareBytes:");
+        specialSelectorArray[PRIMITIVE_HASH_BYTES] = symbols.lookup("hashBytes");
+        specialSelectorArray[PRIMITIVE_CLASS] = symbols.lookup("class");
+        specialSelectorArray[PRIMITIVE_VALUE_NO_ARG] = symbols.lookup("value");
+        specialSelectorArray[PRIMITIVE_VALUE_ONE_ARG] = symbols.lookup("value:");
+        specialSelectorArray[PRIMITIVE_VALUE_TWO_ARGS] = symbols.lookup("value:value:");
+        specialSelectorArray[PRIMITIVE_VALUE_THREE_ARGS] = symbols.lookup("value:value:value:");
+        specialSelectorArray[PRIMITIVE_VALUE_N_ARGS] = symbols.lookup("withArgs:");
+        specialSelectorArray[PRIMITIVE_PERFORM_NO_ARG] = symbols.lookup("perform:");
+        specialSelectorArray[PRIMITIVE_PERFORM_ONE_ARG] = symbols.lookup("perform:with:");
+        specialSelectorArray[PRIMITIVE_VALUE_TWO_ARGS] = symbols.lookup("perform:with:and:");
+        specialSelectorArray[PRIMITIVE_VALUE_THREE_ARGS] = symbols.lookup("perform:with:and:and:");
+        specialSelectorArray[PRIMITIVE_PERFORM_N_ARGS] = symbols.lookup("perform:withArgs:");
 
         // From now on, these selectors are sent to the receiver (and might still invoke a primitive)
         // but might also be overwritten by a class.
-        specialSelectorArray[23] = symbols.lookup("hash");
-        specialSelectorArray[24] = symbols.lookup("size");
-        specialSelectorArray[25] = symbols.lookup("at:");
-        specialSelectorArray[26] = symbols.lookup("at:put:");
-        specialSelectorArray[27] = symbols.lookup("asSymbol");
-        specialSelectorArray[28] = symbols.lookup("asString");
-        specialSelectorArray[29] = symbols.lookup("do:");
-        specialSelectorArray[30] = symbols.lookup("each:");
-        specialSelectorArray[31] = symbols.lookup("ifTrue:");
-        specialSelectorArray[32] = symbols.lookup("ifFalse:");
-        specialSelectorArray[33] = symbols.lookup("ifTrue:otherwise:");
-        specialSelectorArray[34] = symbols.lookup("whileTrue:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 1] = symbols.lookup("id");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 2] = symbols.lookup("size");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 3] = symbols.lookup("at:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 4] = symbols.lookup("at:put:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 5] = symbols.lookup("asString");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 6] = symbols.lookup("/");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 7] = symbols.lookup("&");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 8] = symbols.lookup("|");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 9] = symbols.lookup("and:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 10] = symbols.lookup("or:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 11] = symbols.lookup("to:do");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 12] = symbols.lookup("do:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 13] = symbols.lookup("collect:");
+        specialSelectorArray[LAST_PREFERRED_PRIMITIVE_INDEX + 14] = symbols.lookup("reject:");
 
         specialSelectorArray.type(arrayType);
+        compiledMethodType[COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = specialSelectorArray;
 
-        ObjectPointer processSchedulerType = makeType(objectType, "ProcessScheduler", 0, TYPE_SIZE);
+
+        ObjectPointer processSchedulerType = makeType(objectType, "ProcessScheduler", System::PROCESSOR_SIZE,
+                                                      TYPE_SIZE);
         proc.type(processSchedulerType);
         dictionary.atPut(symbols.lookup("Processor"), proc);
 
@@ -203,13 +232,13 @@ namespace pimii {
     }
 
     void System::completeType(ObjectPointer type, ObjectPointer parent, const std::string& name,
-                              SmallInteger effectiveFixedFields) {
+                              SmallInteger effectiveFixedClassFields, SmallInteger effectiveFixedFields) {
         ObjectPointer metaType = mm.makeObject(TYPE_SIZE, metaClassType);
         type.type(metaType);
 
         metaType[TYPE_FIELD_NAME] = symbols.lookup(name + " class");
         metaType[TYPE_FIELD_SUPERTYPE] = parent.type();
-        metaType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = TYPE_SIZE;
+        metaType[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = effectiveFixedClassFields;
         type[TYPE_FIELD_NAME] = symbols.lookup(name);
         type[TYPE_FIELD_SUPERTYPE] = parent;
         type[TYPE_FIELD_NUMBER_OF_FIXED_FIELDS] = effectiveFixedFields;
@@ -219,7 +248,7 @@ namespace pimii {
 
     SmallInteger System::specialSelectorIndex(const std::string& name) {
         ObjectPointer symbol = symbols.lookup(name);
-        for (SmallInteger index = 0; index < NUMBER_OF_SPECIAL_SELECTORS; index++) {
+        for (SmallInteger index = 0; index < specialSelectorArray.size(); index++) {
             if (symbol == specialSelectorArray[index]) {
                 return index;
             }

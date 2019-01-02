@@ -15,8 +15,7 @@ namespace pimii {
     }
 
     ObjectPointer SymbolTable::lookup(const std::string_view& name) {
-        std::hash<std::string_view> hasher;
-        auto hash = SmallIntegers::toSafeSmallInteger(hasher(name));
+        auto hash = ObjectPointer::hashByteArray(name.data(), static_cast<SmallInteger>(name.size()));
         ObjectPointer table = symbolTable[FIELD_TABLE];
 
         for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
@@ -47,7 +46,7 @@ namespace pimii {
     }
 
     void SymbolTable::reInsert(ObjectPointer table, ObjectPointer symbol) {
-        SmallInteger hash = symbol.hashString();
+        SmallInteger hash = symbol.hash();
 
         for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
             if (table[loop()] == Nil::NIL) {

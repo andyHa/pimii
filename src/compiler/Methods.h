@@ -88,6 +88,7 @@ namespace pimii {
                        ObjectPointer compiledMethod);
 
         ObjectPointer createMethod(MethodHeader header,
+                                   ObjectPointer type, ObjectPointer selector,
                                    const std::vector<ObjectPointer>& literals,
                                    const std::vector<uint8_t>& byteCodes);
 

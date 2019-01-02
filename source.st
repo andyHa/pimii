@@ -25,41 +25,102 @@ isNil
 notNil
     ^true.
 ------------------------
+ifNil: aBlock
+    self isNil ifTrue: [ ^aBlock value. ].
+    ^self.
+------------------------
 id
-    <Primitive:23>
-    ^0.
+    <Primitive:37>
 ------------------------
 hash
     self id.
 ------------------------
+hashBytes
+    <Primitive:22>
+------------------------
+compareBytesTo: other
+    <Primitive:21>
+------------------------
+== other
+    <Primitive:0>
+------------------------
+= other
+    ^self == other.
+------------------------
+<> other
+    ^(self = other) not.
+------------------------
+at: index
+    <Primitive:43>
+------------------------
+at: index put: value
+    <Primitive:44>
+------------------------
+transferTo: dest index: index destIndex: destIndex length: length
+    <Primitive:45>
+------------------------
+objectAt: index
+    <Primitive:34>
+------------------------
+objectAt: index put: value
+    <Primitive:35>
+------------------------
+objectTransferTo: dest index: index destIndex: destIndex length: length
+    <Primitive:36>
+------------------------
+byteAt: index
+    <Primitive:18>
+------------------------
+byteAt: index put: value
+    <Primitive:19>
+------------------------
 class
-    <Primitive:12>
+    <Primitive:23>
+------------------------
+size
+    <Primitive:38>
+------------------------
+objectSize
+    <Primitive:39>
+------------------------
+is: aClass
+    | currentClass |
+    currentClass := self class.
+    [ currentClass notNil ] whileTrue: [
+        (currentClass = aClass) ifTrue: [ ^true ].
+        currentClass := currentClass superclass.
+    ].
+    ^false.
+------------------------
+init
     ^self.
 ------------------------
 
 Methods: Behaviour
 ------------------------
 basicNew
-    <Primitive:10>
-    ^self.
+    <Primitive:15>
 ------------------------
 basicNew: size
-    <Primitive:11>
-    ^self.
+    <Primitive:16>
 ------------------------
 new
-    <Primitive:10>
-    ^self.
+    ^self basicNew init.
 ------------------------
 new: size
-    <Primitive:11>
-    ^self.
+    ^(self basicNew: size) init.
+------------------------
+basicAlloc: size
+    <Primitive:17>
+------------------------
+alloc: size
+    ^self basicAlloc: size.
 ------------------------
 name
     ^name.
 ------------------------
-name
-    ^name.
+superclass
+    ^superclass.
 ------------------------
 asString
     ^name plainString.
@@ -68,8 +129,10 @@ asString
 Methods: Symbol
 ------------------------
 plainString
-    <Primitive:31>
-    ^self.
+    | string |
+    string := String alloc: self size.
+    self transferBytesTo: string index: 1 destIndex: 1 length: self size.
+    ^string.
 ------------------------
 asString
     ^'#' , self plainString.
@@ -82,19 +145,108 @@ asString
 ------------------------
 asSymbol
     <Primitive:30>
-    ^self.
+------------------------
+length
+    ^self size - 1.
 ------------------------
 , other
-    <Primitive:32>
-    ^self , other asString.
+    | string |
+    other := other asString.
+    string := String alloc: self length + other length + 1.
+    self transferBytesTo: string index: 1 destIndex: 1 length: self length.
+    other transferBytesTo: string index: 1 destIndex: self length + 1 length: other length.
+
+    ^string.
+------------------------
+at: index
+    ^Character asChar: (self byteAt: index).
+------------------------
+at: index put: character
+    ^self byteAt: index put: character value.
+------------------------
+from: start to: end
+    | substring |
+    end <= start ifTrue: [ ^String empty. ].
+    start := 1 max: start.
+    end := self length min: end.
+    substring := String alloc: end - start + 2.
+    self transferBytesTo: substring index: start destIndex: 0 length: end - start + 1.
+    ^substring.
+------------------------
+left: length
+    length >= self length ifTrue: [ ^self ].
+    length <= self length negated ifTrue: [ ^String empty ].
+    length > 0 ifTrue: [ ^self from: 1 to: length ].
+    length < 0 ifTrue: [ ^self from: length abs to: self length ].
+    ^String empty.
+------------------------
+right: length
+    length >= self length ifTrue: [ ^self ].
+    length <= self length negated ifTrue: [ ^String empty ].
+    length > 0 ifTrue: [ ^self from: self length - length to: self length ].
+    length > 0 ifTrue: [ ^self from: 1 to: self length + length ].
+    ^String empty.
+------------------------
+< other
+    ^(self compareBytesTo: other) = -1.
+------------------------
+<= other
+    ^(self compareBytesTo: other) <= 0.
+------------------------
+= other
+    ^(self compareBytesTo: other) = 0.
+------------------------
+>= other
+    ^(self compareBytesTo: other) >= 0.
+------------------------
+> other
+    ^(self compareBytesTo: other) = 1.
+------------------------
+
+Class: Character
+Superclass: Object
+Instance Fields: value
+Class Fields: table
+
+Class Methods: Character
+------------------------
+asChar: aByte
+    (0 to: 255 contains: aByte) ifFalse: [ self error: 'Invalid character: ', aByte ].
+    ^table at: aByte + 1.
+------------------------
+digitValue: aValue
+    (0 to: 9 contains: aValue) ifTrue: [ ^self asChar: aValue + 48 ].
+    (10 to: 35 contains: aValue) ifTrue: [ ^self asChar: aValue + 55 ].
+    self error: 'Invalid digit: ', aByte.
 ------------------------
 
 
-Class Methods: System
+
+Methods: Character
 ------------------------
-log: aString
-    <Primitive:33>
-    ^self.
+value
+    ^value.
+------------------------
+isDigit
+    ^48 to: 57 contains: value.
+------------------------
+isUpper
+    ^65 to: 90 contains: value.
+------------------------
+isLower
+    ^97 to: 122 contains: value.
+------------------------
+isAlpha
+    ^self isUpper or: [ self isLower].
+------------------------
+isAlphaNumeric
+    ^self isDigit or: [ self isAlphaNumeric].
+------------------------
+asString
+    | result |
+    result := String alloc: 2.
+    result at: 1 put: self.
+    ^result.
 ------------------------
 
 Methods: Nil
@@ -123,14 +275,26 @@ not
 ifTrue: aBlock
     ^aBlock value.
 ------------------------
+ifTrue: aBlock ifFalse: otherBlock
+    ^aBlock value.
+------------------------
 ifFalse: aBlock
     ^nil.
 ------------------------
 & other
     ^other.
 ------------------------
-|| other
+and: otherBlock
+    ^otherBlock value.
+------------------------
+or: otherBlock
     ^true.
+------------------------
+| other
+    ^true.
+------------------------
+asString
+    ^'true'.
 ------------------------
 
 Methods: False
@@ -141,45 +305,79 @@ not
 ifTrue: aBlock
     ^nil.
 ------------------------
+ifTrue: aBlock ifFalse: otherBlock
+    ^otherBlock value.
+------------------------
 ifFalse: aBlock
     ^aBlock value.
 ------------------------
 & other
     ^false.
 ------------------------
-|| other
+and: otherBlock
+    ^false.
+------------------------
+or: otherBlock
+    ^otherBlock value.
+------------------------
+| other
     ^other.
+------------------------
+asString
+    ^'false'.
 ------------------------
 
 Methods: SmallInteger
 ------------------------
-negate
+negated
     ^self * -1.
 ------------------------
+min: other
+    self < other ifTrue: [ ^self ] ifFalse: [ ^other ].
+------------------------
+max: other
+    self > other ifTrue: [ ^self ] ifFalse: [ ^other ].
+------------------------
 abs
-    (self < 0) ifTrue:  [ ^self negated. ].
+    (self < 0) ifTrue: [ ^self negated ].
     ^self.
 ------------------------
 asString: radix
     | result value |
 
     result := ''.
-    (self < 0) ifTrue: [ result := '-'. ].
+    (self < 0) ifTrue: [ result := '-' ].
 
     value := self abs.
 
     [ value >= radix ] whileTrue:
-        [   result := ((Character digitValue: (value % radix)) toString), result.
+        [   result := (Character digitValue: value % radix) asString , result.
             value := value // radix. ].
 
-    result := ((Character digitValue: value) toString), result.
+    result := (Character digitValue: value) asString, result.
     ^result.
+------------------------
+to: other do: aBlock
+    other >= self ifTrue:  [ self to: other by:  1 do: aBlock ]
+                  ifFalse: [ self to: other by: -1 do: aBlock ].
+------------------------
+to: other by: delta do: aBlock
+    | index |
+    index := self.
+    [ index != other ] whileTrue: [ aBlock value: index. index := index + delta ].
+------------------------
+to: other contains: aValue
+    ^(aValue >= self) & (aValue <= other).
 ------------------------
 
 Methods: BlockContext
 ------------------------
-fork
+fork: name
     <Primitive:25>
+------------------------
+whileNotNil: aBlock
+    | obj |
+    [ obj := self value. obj notNil ] whileTrue: [ aBlock value: obj ].
 ------------------------
 
 Class: ProcessScheduler
@@ -193,10 +391,10 @@ Instance Fields: excessSignals firstWaitingProcess lastWaitingProcess
 Methods: Semaphore
 ------------------------
 wait
-    <Primitive:26>
+    <Primitive:41>
 ------------------------
 signal
-    <Primitive:27>
+    <Primitive:42>
 ------------------------
 
 Class: Terminal
@@ -206,22 +404,22 @@ Class Fields: root
 Class Methods: Terminal
 ------------------------
 nextEvent
-    <Primitive:34>
+    <Primitive:46>
 ------------------------
 size
-    <Primitive:35>
+    <Primitive:47>
 ------------------------
 at: aPoint color: aColorIndex put: aString
-    <Primitive:36>
+    <Primitive:48>
 ------------------------
 showCursor
-    <Primitive:37>
+    <Primitive:49>
 ------------------------
 hideCursor
-    <Primitive:38>
+    <Primitive:50>
 ------------------------
 draw
-    <Primitive:39>
+    <Primitive:51>
 ------------------------
 
 Class: InputEvent
@@ -264,10 +462,287 @@ y: newY
     y := newY.
     ^self.
 ------------------------
++ aPoint
+    ^Point x: x + aPoint x y: y + aPoint y.
+------------------------
 
+Class: Rectangle
+Superclass: Object
+Instance Fields: origin dimensions
+
+Class Methods: Rectangle
+------------------------
+origin: aPoint dimensions: anotherPoint
+    | rect |
+    rect := self new.
+    rect origin: origin.
+    rect dimensions: dimensions.
+    ^rect.
+------------------------
+
+Methods: Rectangle
+------------------------
+origin
+    ^origin.
+------------------------
+dimensions
+    ^dimensions.
+------------------------
+origin: aPoint
+    origin := aPoint.
+    ^self.
+------------------------
+dimensions: aPoint
+    dimensions := aPoint.
+    ^self.
+------------------------
+contains: aPoint
+    aPoint x < origin x ifTrue: [ ^false. ].
+    aPoint y < origin y ifTrue: [ ^false. ].
+
+    aPoint x > (origin x + dimensions x) ifTrue: [ ^false. ].
+    aPoint y > (origin y + dimensions y) ifTrue: [ ^false. ].
+
+    ^true.
+------------------------
+intersects: aRect
+    aRect origin x > (origin x + dimensions x) ifTrue: [ ^false. ].
+    aRect origin y > (origin y + dimensions y) ifTrue: [ ^false. ].
+
+    (aRect origin x + aRect dimensions x) < origin x ifTrue: [ ^false. ].
+    (aRect origin y + aRect dimensions y) < origin y ifTrue: [ ^false. ].
+
+    ^true.
+------------------------
 
 Methods: SmallInteger
 ------------------------
 @ other
     ^Point x: self y: other.
+------------------------
+
+Class: Component
+Superclass: Object
+Instance Fields: rect
+
+Methods: Component
+------------------------
+redraw: requiredRect
+    ^nil.
+------------------------
+at: localPoint inColor: aColorIndex put: aString
+    | pos |
+    localPoint y >= rect dimensions y ifTrue: [ ^self. ].
+    localPoint x + aString size >= rect dimensions x ifTrue: [
+
+    ].
+
+    pos := localPoint + rect origin.
+
+    pos y < 0 ifTrue: [ ^self. ].
+
+    pos x < 0 ifTrue: [
+        pos x negate >= aString size ifTrue: [ ^self. ].
+        aString := aString left: pos x.
+        pos x: 0.
+    ].
+
+
+    ^self.
+------------------------
+
+Class: RenderContext
+Superclass: Object
+Instance Fields: parent offset dimensions currentColor
+
+Class Methods: RenderContext
+------------------------
+withParent: aParent offset: localOffset dimensions: dimensions
+    | ctx |
+    ctx := self new.
+    parent := aParent.
+    aParent notNil ifTrue: [
+        currentColor := aParent color.
+        offset = aParent offset + localOffset.
+
+    ].
+------------------------
+
+Methods: RenderContext
+------------------------
+
+at: aPoint startWith: leftString repeat: filler endWith: endString
+    ^nil.
+------------------------
+
+
+
+Class: Link
+Superclass: Object
+Instance Fields: value next
+
+Methods: Link
+------------------------
+value
+    ^value.
+------------------------
+next
+    ^next.
+------------------------
+value: aValue
+    value := aValue.
+    ^self.
+------------------------
+next: nextLink
+    next := nextLink.
+    ^self.
+------------------------
+
+Class: LinkedList
+Superclass: Object
+Instance Fields: head tail
+
+Methods: LinkedList
+------------------------
+append: aValue
+    | nextLink |
+    nextLink := Link new value: aValue.
+    tail isNil ifTrue: [ head := nextLink. tail := nextLink. ]
+               otherwise: [ tail next: nextLink. tail := nextLink. ].
+    ^self.
+------------------------
+each: aBlock
+    | node |
+    node := head.
+    [ node notNil ] whileTrue: [ aBlock value: node value. node := node next. ].
+    ^self.
+------------------------
+
+Class: Array
+Superclass: Object
+
+Methods: Array
+------------------------
+do: aBlock
+    1 to: self size do: [ :i | aBlock value: (self at: i) ].
+------------------------
+filter: aFilterBlock do: aBlock
+    self do: [ :element | (aFilterBlock value: element) ifTrue: [ aBlock value: element ] ].
+------------------------
+withHash: aHash loop: aBlock
+    | index |
+
+    index := aHash % self size.
+    index to: self size do: aBlock.
+    1 to: (index - 1) do: aBlock.
+------------------------
+
+Class: Dictionary
+Superclass: Object
+Instance Fields: tally table
+
+Methods: Dictionary
+------------------------
+init
+    tally := 0.
+    table := Array new: 32.
+------------------------
+do: aBlock
+    table filter: [ :association | association notNil ] do: [ :association | aBlock value: association ].
+------------------------
+associationAt: aKey
+    | association |
+    table withHash: aKey hash loop: [ :i |
+         association := table at: i.
+         association isNil ifTrue: [
+            association := Association forKey: aKey.
+            table at: i put: association.
+            self incrementTally.
+            ^association.
+         ].
+
+         association key = key ifTrue: [ ^association. ].
+    ].
+
+    self error: 'Dictionary overflow'.
+------------------------
+incrementTally
+    tally := tally + 1.
+    (tally > (table size * 3 // 4)) ifTrue: [ self grow ].
+------------------------
+grow
+    | oldTable |
+    oldTable := table.
+    table := Array new: table size + 32.
+    oldTable filter: [ :a | a notNil ] do: [ :a | self at: a key put: a value ].
+------------------------
+at: aKey
+   | association |
+   table withHash: aKey hash loop: [ :i |
+        association := table at: i.
+        association isNil ifTrue: [ ^nil ].
+        association key = key ifTrue: [ ^association value ].
+   ].
+------------------------
+at: aKey put: aValue
+    ^(self associationAt: aKey) value: aValue.
+------------------------
+remove: aKey
+    | association |
+    table withHash: aKey hash loop: [ :i |
+        association := table at: i.
+        association isNil ifTrue: [ ^nil ].
+        association key = key ifTrue: [
+            table at: i put: nil.
+            tally := tally - 1.
+            ^association value ].
+    ].
+    ^nil.
+------------------------
+
+Class: IdentityDictionary
+Superclass: Dictionary
+
+Methods: IdentityDictionary
+------------------------
+at: aKey
+    ^(self associationAt: aKey) value.
+------------------------
+remove: aKey
+    | association previousValue |
+    association := self associationAt: aKey.
+    previousValue := association value.
+    association value: nil.
+    ^previousValue.
+------------------------
+
+Class: Association
+Superclass: Object
+Instance Fields: key value
+
+Class Methods: Association
+------------------------
+forKey: aKey
+    | association |
+    association := self new.
+    association key: aKey.
+    ^association.
+------------------------
+
+Methods: Association
+------------------------
+key
+    ^key.
+------------------------
+value
+    ^value.
+------------------------
+key: aKey
+    key := aKey.
+------------------------
+value: aValue
+    value := aValue.
+------------------------
+asString
+    ^(key asString , ': ', value asString).
 ------------------------

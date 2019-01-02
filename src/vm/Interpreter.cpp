@@ -4,6 +4,7 @@
 
 #include <array>
 #include <iostream>
+#include <sstream>
 #include "Interpreter.h"
 #include "Primitives.h"
 #include "../common/Looping.h"
@@ -13,9 +14,6 @@ namespace pimii {
 
 
     Interpreter::Interpreter(System& system) : system(system), contextSwitchExpected(false) {
-        // Install by emulating: "CompiledMethod class specialSelectors: <array>"
-        system.typeCompiledMethod()[Interpreter::COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS] = system.specialSelectors();
-
         startup = std::chrono::steady_clock::now();
         lastMetrics = std::chrono::steady_clock::now();
     }
@@ -142,7 +140,7 @@ namespace pimii {
                 push(literal(index));
                 return;
             case OP_PUSH_LITERAL_VARIABLE:
-                push(literal(index)[SystemDictionary::ASSOCIATION_FIELD_VALUE]);
+                push(literal(index)[System::ASSOCIATION_FIELD_VALUE]);
                 return;
             case OP_PUSH_TEMPORARY:
                 push(temporary(index));
@@ -157,7 +155,7 @@ namespace pimii {
                 temporary(index, pop());
                 return;
             case OP_POP_AND_STORE_IN_LITERAL_VARIABLE:
-                literal(index)[SystemDictionary::ASSOCIATION_FIELD_VALUE] = pop();
+                literal(index)[System::ASSOCIATION_FIELD_VALUE] = pop();
                 return;
             case OP_POP:
                 pop();
@@ -178,24 +176,25 @@ namespace pimii {
                 send(literal(fetchInstruction()), index);
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_NO_ARGS:
-                if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 0)) {
+                if (index > System::LAST_PREFERRED_PRIMITIVE_INDEX || !executePrimitive(index, 0)) {
                     send(system.specialSelector(index), 0);
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_ONE_ARG:
-                if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 1)) {
+                if (index > System::LAST_PREFERRED_PRIMITIVE_INDEX || !executePrimitive(index, 1)) {
                     send(system.specialSelector(index), 1);
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_TWO_ARGS:
-                if (index > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(index, 2)) {
+                if (index > System::LAST_PREFERRED_PRIMITIVE_INDEX || !executePrimitive(index, 2)) {
                     send(system.specialSelector(index), 2);
                 }
                 return;
             case OP_SEND_SPECIAL_SELECTOR_WITH_N_ARGS:
                 SmallInteger primitiveIndex = fetchInstruction();
-                if (primitiveIndex > LAST_PREFERRED_PRIMITIVE_SELECTOR || !executePrimitive(primitiveIndex, index)) {
-                    send(system.specialSelector(index), index);
+                if (primitiveIndex > System::LAST_PREFERRED_PRIMITIVE_INDEX ||
+                    !executePrimitive(primitiveIndex, index)) {
+                    send(system.specialSelector(primitiveIndex), index);
                 }
                 return;
         }
@@ -214,26 +213,26 @@ namespace pimii {
     }
 
     void Interpreter::storeContextRegisters() {
-        activeContext[CONTEXT_IP_FIELD] = ip;
-        activeContext[CONTEXT_SP_FIELD] = sp;
+        activeContext[System::CONTEXT_IP_FIELD] = ip;
+        activeContext[System::CONTEXT_SP_FIELD] = sp;
     }
 
     void Interpreter::fetchContextRegisters() {
         if (isBlockContext(activeContext)) {
-            homeContext = activeContext[CONTEXT_HOME_FIELD];
+            homeContext = activeContext[System::CONTEXT_HOME_FIELD];
             temporaryCount = 0;
         } else {
             homeContext = activeContext;
             temporaryCount = MethodHeader(
-                    homeContext[CONTEXT_METHOD_FIELD][COMPILED_METHOD_FIELD_HEADER].smallInt()).temporaries();
+                    homeContext[System::CONTEXT_METHOD_FIELD][System::COMPILED_METHOD_FIELD_HEADER].smallInt()).temporaries();
         }
 
-        receiver = homeContext[CONTEXT_RECEIVER_FIELD];
-        method = homeContext[CONTEXT_METHOD_FIELD];
-        opCodes = method[COMPILED_METHOD_FIELD_OPCODES];
+        receiver = homeContext[System::CONTEXT_RECEIVER_FIELD];
+        method = homeContext[System::CONTEXT_METHOD_FIELD];
+        opCodes = method[System::COMPILED_METHOD_FIELD_OPCODES];
         maxIP = opCodes.byteSize();
-        ip = (SmallInteger) activeContext[CONTEXT_IP_FIELD].smallInt();
-        sp = (SmallInteger) activeContext[CONTEXT_SP_FIELD].smallInt();
+        ip = (SmallInteger) activeContext[System::CONTEXT_IP_FIELD].smallInt();
+        sp = (SmallInteger) activeContext[System::CONTEXT_SP_FIELD].smallInt();
     }
 
     uint8_t Interpreter::fetchInstruction() {
@@ -244,23 +243,23 @@ namespace pimii {
     }
 
     ObjectPointer Interpreter::sender() {
-        return homeContext[CONTEXT_SENDER_FIELD];
+        return homeContext[System::CONTEXT_SENDER_FIELD];
     }
 
     ObjectPointer Interpreter::caller() {
-        return activeContext[CONTEXT_SENDER_FIELD];
+        return activeContext[System::CONTEXT_SENDER_FIELD];
     }
 
     ObjectPointer Interpreter::temporary(SmallInteger index) {
-        return homeContext[CONTEXT_FIXED_SIZE + index];
+        return homeContext[System::CONTEXT_FIXED_SIZE + index];
     }
 
     void Interpreter::temporary(SmallInteger index, ObjectPointer value) {
-        homeContext[CONTEXT_FIXED_SIZE + index] = value;
+        homeContext[System::CONTEXT_FIXED_SIZE + index] = value;
     }
 
     ObjectPointer Interpreter::literal(SmallInteger index) {
-        return method[COMPILED_METHOD_FIELD_LITERALS_START + index];
+        return method[System::COMPILED_METHOD_FIELD_LITERALS_START + index];
     }
 
     void Interpreter::returnValueTo(ObjectPointer returnValue, ObjectPointer targetContext) {
@@ -306,11 +305,13 @@ namespace pimii {
         ObjectPointer newMethod = findMethod(type, selector);
 
         if (newMethod == Nil::NIL) {
-            std::cout << selector.stringView() << std::endl;
-            throw std::runtime_error("unknown method!");
+            std::stringstream errorMessage;
+            errorMessage << "Unknown method " << selector.stringView() << " in "
+                         << system.type(newReceiver)[System::TYPE_FIELD_NAME].stringView();
+            throw std::runtime_error(errorMessage.str());
         }
 
-        MethodHeader header(newMethod[COMPILED_METHOD_FIELD_HEADER].smallInt());
+        MethodHeader header(newMethod[System::COMPILED_METHOD_FIELD_HEADER].smallInt());
 
         if (header.methodType() == CompiledMethodType::MT_PRIMITIVE) {
             if (executePrimitive(header.primitiveIndex(), numArguments)) {
@@ -333,18 +334,18 @@ namespace pimii {
 
         // TODO check if method is non-nil and has bytecodes
         ObjectPointer newContext = system.memoryManager().makeObject(
-                CONTEXT_FIXED_SIZE + (header.largeContextFlag() ? 16 : 8), system.typeMethodContext());
-        newContext[CONTEXT_SENDER_FIELD] = activeContext;
-        newContext[CONTEXT_IP_FIELD] = 0;
-        newContext[CONTEXT_SP_FIELD] = header.temporaries();
-        newContext[CONTEXT_METHOD_FIELD] = newMethod;
-        newContext[CONTEXT_RECEIVER_FIELD] = newReceiver;
+                System::CONTEXT_FIXED_SIZE + (header.largeContextFlag() ? 32 : 16), system.typeMethodContext());
+        newContext[System::CONTEXT_SENDER_FIELD] = activeContext;
+        newContext[System::CONTEXT_IP_FIELD] = 0;
+        newContext[System::CONTEXT_SP_FIELD] = header.temporaries();
+        newContext[System::CONTEXT_METHOD_FIELD] = newMethod;
+        newContext[System::CONTEXT_RECEIVER_FIELD] = newReceiver;
 
         //TODO ensure proper stack limits
         //TODO ensure numArguments <= numTeporaries
         if (numArguments > 0) {
             activeContext.transferFieldsTo(basePointer() + (sp - numArguments), newContext,
-                                           CONTEXT_FIXED_SIZE, numArguments);
+                                           System::CONTEXT_FIXED_SIZE, numArguments);
         }
 
         pop(numArguments + 1);
@@ -357,9 +358,8 @@ namespace pimii {
     }
 
     bool Interpreter::isBlockContext(ObjectPointer context) {
-        return context[CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].isSmallInt();
+        return context[System::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].isSmallInt();
     }
-
 
     void Interpreter::dispatchJump(uint8_t code, uint8_t index) {
         int delta = index * 255 + fetchInstruction();
@@ -399,10 +399,9 @@ namespace pimii {
         ObjectPointer newContext = system.memoryManager().makeObject(
                 activeContext.size(), system.typeBlockContext());
 
-        newContext[Interpreter::CONTEXT_INITIAL_IP_FIELD] =
-                ip + 2;
-        newContext[Interpreter::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = blockArgumentCount;
-        newContext[Interpreter::CONTEXT_HOME_FIELD] = homeContext;
+        newContext[System::CONTEXT_INITIAL_IP_FIELD] = ip + 2;
+        newContext[System::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD] = blockArgumentCount;
+        newContext[System::CONTEXT_HOME_FIELD] = homeContext;
         push(ObjectPointer(newContext));
     }
 
@@ -489,8 +488,8 @@ namespace pimii {
 
         instuctionsPerSecond = instuctionsExecuted;
 
-    //    std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s, GC: "
-    //              << system.memoryManager().gcMicros() << "us" << std::endl;
+        //    std::cout << "Metrics: " << activePercent << "%, " << instuctionsPerSecond << " op/s, GC: "
+        //              << system.memoryManager().gcMicros() << "us" << std::endl;
         instuctionsExecuted = 0;
         activeMicros = 0;
         lastMetrics = std::chrono::steady_clock::now();

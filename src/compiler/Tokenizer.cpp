@@ -211,7 +211,7 @@ namespace pimii {
             }
         }
 
-        bool lastCharacterWasDigit = false;
+        bool lastCharacterWasDigit = true;
         while (isdigit(reader.current()) || (reader.current() == '_' && lastCharacterWasDigit)) {
             if (reader.current() != '_') {
                 value += reader.consume();

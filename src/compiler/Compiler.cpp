@@ -59,6 +59,7 @@ namespace pimii {
                                                                  context.getMaxTemporaries(),
                                                                  false)
                                     : MethodHeader::forByteCodes(context.getMaxTemporaries(), false),
+                type, system.symbolTable().lookup(selector),
                 context.getLiterals(), context.getOpCodes());
     }
 

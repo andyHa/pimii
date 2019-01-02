@@ -74,23 +74,6 @@ namespace pimii {
 
     public:
 
-        static constexpr SmallInteger COMPILED_METHOD_SIZE = 2;
-        static constexpr SmallInteger COMPILED_METHOD_FIELD_HEADER = 0;
-        static constexpr SmallInteger COMPILED_METHOD_FIELD_OPCODES = 1;
-        static constexpr SmallInteger COMPILED_METHOD_FIELD_LITERALS_START = 2;
-        static constexpr SmallInteger COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = 6;
-
-        static constexpr SmallInteger CONTEXT_FIXED_SIZE = 6;
-        static constexpr SmallInteger CONTEXT_SENDER_FIELD = 0;
-        static constexpr SmallInteger CONTEXT_CALLER_FIELD = 0;
-        static constexpr SmallInteger CONTEXT_IP_FIELD = 1;
-        static constexpr SmallInteger CONTEXT_SP_FIELD = 2;
-        static constexpr SmallInteger CONTEXT_METHOD_FIELD = 3;
-        static constexpr SmallInteger CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD = 3;
-        static constexpr SmallInteger CONTEXT_INITIAL_IP_FIELD = 4;
-        static constexpr SmallInteger CONTEXT_HOME_FIELD = 5;
-        static constexpr SmallInteger CONTEXT_RECEIVER_FIELD = 5;
-
         static constexpr uint8_t OP_RETURN = 0;
         static constexpr uint8_t OP_RETURN_RECEIVER_INDEX = 0;
         static constexpr uint8_t OP_RETURN_TRUE_INDEX = 1;
@@ -130,12 +113,14 @@ namespace pimii {
         static constexpr uint8_t OP_JUMP_BACK = 23;
         static constexpr uint8_t OP_BLOCK_COPY = 24;
 
-        static constexpr uint8_t LAST_PREFERRED_PRIMITIVE_SELECTOR = 22;
-
         explicit Interpreter(System& system);
 
         ObjectPointer currentActiveContext() {
             return activeContext;
+        }
+
+        SmallInteger currentIP() {
+            return ip;
         }
 
 
@@ -200,7 +185,7 @@ namespace pimii {
         }
 
         SmallInteger basePointer() {
-            return CONTEXT_FIXED_SIZE + temporaryCount;
+            return System::CONTEXT_FIXED_SIZE + temporaryCount;
         }
 
         ObjectPointer popFront(ObjectPointer list, SmallInteger first, SmallInteger last);

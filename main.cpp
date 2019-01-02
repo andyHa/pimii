@@ -37,34 +37,36 @@ int main() {
 
     std::vector<pimii::Error> errors;
     pimii::Tokenizer tokenizer(
-            "[ [ true ] whileTrue: [ InputSemaphore wait. Terminal at: 0 @ 0 color: 0 put: Terminal nextEvent key asString. Terminal draw. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
+//            "[ [ true ] whileTrue: [ InputSemaphore wait. [ Terminal nextEvent] whileNotNil: [ :event | Terminal at: 0 @ 0 color: 0 put: event key asString. Terminal draw. ]. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
+          //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
+            "Terminal at: 0 @ 0 color: 0 put: (255 asString: 16) . Terminal draw.",
             errors);
 
-    pimii::Compiler compiler(tokenizer, errors, pimii::Nil::NIL);
+    pimii::Compiler compiler(tokenizer, errors, sys.typeArray());
     pimii::ObjectPointer method = compiler.compileExpression(sys);
     //pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
 //    pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
-    pimii::ObjectPointer context = sys.memoryManager().makeObject(pimii::Interpreter::CONTEXT_FIXED_SIZE + 8,
+    pimii::ObjectPointer context = sys.memoryManager().makeObject(pimii::System::CONTEXT_FIXED_SIZE + 8,
                                                                   pimii::Nil::NIL);
-    context[pimii::Interpreter::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
-    context[pimii::Interpreter::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
-    context[pimii::Interpreter::CONTEXT_METHOD_FIELD] = method;
+    context[pimii::System::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+    context[pimii::System::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
+    context[pimii::System::CONTEXT_METHOD_FIELD] = method;
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     //interpreter.newActiveContext(context);
 
-    initscr();
-    cbreak();
-    noecho();
+  //  initscr();
+  //  cbreak();
+  //  noecho();
 
     // Enables keypad mode. This makes (at least for me) mouse events getting
     // reported as KEY_MOUSE, instead as of random letters.
-    keypad(stdscr, TRUE);
+   // keypad(stdscr, TRUE);
 
     // Don't mask any mouse events
- //   mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+    //mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
- //   printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
+  //  printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
 
     std::thread([&sys]() {
         while (true) {
@@ -87,7 +89,30 @@ int main() {
         }
     }).detach();
 
-    interpreter.run(context);
+    try {
+        interpreter.run(context);
+    } catch (const std::exception& e) {
+        endwin();
+        std::cout << e.what() << std::endl;
+        pimii::ObjectPointer ctx = interpreter.currentActiveContext();
+        ctx[pimii::System::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(interpreter.currentIP());
+        int limit = 25;
+        while (limit-- > 0 && ctx != pimii::Nil::NIL) {
+            pimii::ObjectPointer method = ctx[pimii::System::CONTEXT_METHOD_FIELD];
+            if (method.isSmallInt()) {
+                method = ctx[pimii::System::CONTEXT_HOME_FIELD][pimii::System::CONTEXT_METHOD_FIELD];
+            }
+            pimii::ObjectPointer type = method[pimii::System::COMPILED_METHOD_FIELD_OWNER];
+            pimii::ObjectPointer selector = method[pimii::System::COMPILED_METHOD_FIELD_SELECTOR];
+            std::cout
+                    << (type == pimii::Nil::NIL ? "?" : type[pimii::System::TYPE_FIELD_NAME].stringView()) << " "
+                    << selector.stringView()
+                    << " - IP: "
+                    << ctx[pimii::System::CONTEXT_IP_FIELD].smallInt()
+                    << std::endl;
+            ctx = ctx[pimii::System::CONTEXT_SENDER_FIELD];
+        }
+    }
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Took: " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "us"
               << std::endl;

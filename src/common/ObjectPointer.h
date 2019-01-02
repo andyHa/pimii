@@ -190,6 +190,13 @@ namespace pimii {
             return *(reinterpret_cast<char*>(&buffer()->fields[0]) + index);
         }
 
+        inline void storeByte(SmallInteger index, char byte) {
+            if (index < 0 || index >= byteSize()) {
+                throw std::range_error("Byte index out of range.");
+            }
+            *(reinterpret_cast<char*>(&buffer()->fields[0]) + index) = byte;
+        }
+
         void loadFrom(const void* src, SmallInteger byteLength) {
             if (byteLength > byteSize()) {
                 throw std::range_error("byteLength index out of range.");
@@ -205,28 +212,48 @@ namespace pimii {
         }
 
         void transferBytesTo(SmallInteger start, ObjectPointer dest, SmallInteger destStart, SmallInteger byteLength) {
-            if (byteLength > byteSize() - start || byteLength > dest.byteSize() - destStart) {
+            if (start < 0 || destStart < 0 || byteLength > byteSize() - start || byteLength > dest.byteSize() - destStart) {
                 throw std::range_error("byteLength index out of range.");
             }
-            std::memcpy(&dest.buffer()->fields[0] + destStart, &buffer()->fields[0] + start,
+            std::memcpy(reinterpret_cast<char*>(&dest.buffer()->fields[0]) + destStart,
+                        reinterpret_cast<char*>( &buffer()->fields[0]) + start,
                         static_cast<size_t>(byteLength));
         }
 
         void
         transferFieldsTo(SmallInteger start, ObjectPointer dest, SmallInteger destStart, SmallInteger numberOfFields) {
-            if (numberOfFields > size() - start || numberOfFields > dest.size() - destStart) {
+            if (start < 0 || destStart < 0 || numberOfFields > size() - start || numberOfFields > dest.size() - destStart) {
                 throw std::range_error("numberOfFields index out of range.");
             }
             std::memcpy(&dest.object()->fields[destStart], &object()->fields[start], numberOfFields * sizeof(Word));
         }
 
         std::string_view stringView() const {
-            return std::string_view(reinterpret_cast<char*>(&buffer()->fields[0]));
+            return std::string_view(byteArray());
         }
 
-        SmallInteger hashString() const {
-            std::hash<std::string_view> fn;
-            return (SmallInteger) fn(stringView());
+        char* byteArray() const {
+            return reinterpret_cast<char*>(&buffer()->fields[0]);
+        }
+
+        SmallInteger hash() const {
+            char* data = byteArray();
+            SmallInteger size = byteSize();
+
+            return hashByteArray(data, size);
+        }
+
+        static SmallInteger hashByteArray(const char* data, SmallInteger size) {
+            SmallInteger result = 0;
+            for (int i = 0; i < size; i++) {
+                result += data[i];
+            }
+
+            if (result < 0) {
+                result *= -1;
+            }
+
+            return result;
         }
 
         int compare(const void* other, SmallInteger length) const {
@@ -278,7 +305,7 @@ namespace pimii {
             return data != rhs.data;
         }
 
-        inline SmallInteger hash() const noexcept {
+        inline SmallInteger id() const noexcept {
             return static_cast<SmallInteger>(data);
         }
 

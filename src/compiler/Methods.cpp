@@ -62,20 +62,23 @@ namespace pimii {
     }
 
     ObjectPointer Methods::createMethod(MethodHeader header,
+                                        ObjectPointer type, ObjectPointer selector,
                                         const std::vector<ObjectPointer>& literals,
                                         const std::vector<uint8_t>& byteCodes) {
-        auto method = mm.makeObject(Interpreter::COMPILED_METHOD_SIZE + (SmallInteger) literals.size(),
+        auto method = mm.makeObject(System::COMPILED_METHOD_SIZE + (SmallInteger) literals.size(),
                                     sys.typeCompiledMethod());
-        method[Interpreter::COMPILED_METHOD_FIELD_HEADER] = header.value();
+        method[System::COMPILED_METHOD_FIELD_HEADER] = header.value();
+        method[System::COMPILED_METHOD_FIELD_OWNER] = type;
+        method[System::COMPILED_METHOD_FIELD_SELECTOR] = selector;
 
-        SmallInteger literalIndex = Interpreter::COMPILED_METHOD_FIELD_LITERALS_START;
+        SmallInteger literalIndex = System::COMPILED_METHOD_FIELD_LITERALS_START;
         for (auto literal : literals) {
             method[literalIndex++] = literal;
         }
 
         if (!byteCodes.empty()) {
             auto bytes = mm.makeBuffer((SmallInteger) byteCodes.size(), sys.typeByteArray());
-            method[Interpreter::COMPILED_METHOD_FIELD_OPCODES] = bytes;
+            method[System::COMPILED_METHOD_FIELD_OPCODES] = bytes;
             bytes.loadFrom(byteCodes.data(), byteCodes.size());
         }
 

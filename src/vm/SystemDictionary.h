@@ -22,14 +22,12 @@ namespace pimii {
         void reInsert(ObjectPointer table, ObjectPointer association);
 
     public:
-        static constexpr SmallInteger DICTIONARY_SIZE = 2;
-        static constexpr SmallInteger DICTIONARY_FIELD_TALLY = 0;
-        static constexpr SmallInteger DICTIONARY_FIELD_TABLE = 1;
-        static constexpr SmallInteger ASSOCIATION_SIZE = 2;
-        static constexpr SmallInteger ASSOCIATION_FIELD_KEY = 0;
-        static constexpr SmallInteger ASSOCIATION_FIELD_VALUE = 1;
 
         explicit SystemDictionary(MemoryManager &mm);
+
+        ObjectPointer getDictionary() {
+            return dictionary;
+        }
 
         void installTypes(ObjectPointer systemDictionaryType, ObjectPointer arrayType, ObjectPointer associationType);
 

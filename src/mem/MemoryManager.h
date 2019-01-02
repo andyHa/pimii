@@ -141,7 +141,7 @@ namespace pimii {
             return gcCounter;
         }
 
-        SmallInteger resetGCCounter() {
+        void resetGCCounter() {
             gcDurationMicros = 0;
             gcCounter = 0;
         }

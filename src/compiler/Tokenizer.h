@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <deque>
+#include <iostream>
 #include "../common/ObjectPointer.h"
 
 namespace pimii {
@@ -57,7 +58,9 @@ namespace pimii {
         SmallInteger lineNumber;
         std::string message;
 
-        Error(SmallInteger lineNumber, const std::string& message) : lineNumber(lineNumber), message(message) {}
+        Error(SmallInteger lineNumber, const std::string& message) : lineNumber(lineNumber), message(message) {
+            std::cout << lineNumber << ": " << message << std::endl;
+        }
     };
 
     struct Token {
@@ -79,7 +82,7 @@ namespace pimii {
         std::deque<Token> bufferedTokens;
         BufferedReader reader;
         SmallInteger line;
-        std::vector<Error> &errors;
+        std::vector<Error>& errors;
 
         Token fetch();
 
@@ -94,7 +97,7 @@ namespace pimii {
         Token readString();
 
     public:
-        Tokenizer(std::string_view input, std::vector<Error> &errors) : input(input), reader(input), line(1),
+        Tokenizer(std::string_view input, std::vector<Error>& errors) : input(input), reader(input), line(1),
                                                                         errors(errors) {}
 
         Token current();
