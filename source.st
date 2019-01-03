@@ -138,13 +138,22 @@ asString
     ^'#' , self plainString.
 ------------------------
 
+Class Methods: Symbol
+------------------------
+forString: aString
+    | symbol |
+    symbol := self alloc: aString size.
+    aString transferBytesTo: symbol index: 1 destIndex: 1 length: aString size.
+    ^symbol.
+------------------------
+
 Methods: String
 ------------------------
 asString
     ^self.
 ------------------------
 asSymbol
-    <Primitive:30>
+    ^Symbols at: self.
 ------------------------
 length
     ^self size - 1.
@@ -201,6 +210,9 @@ right: length
 ------------------------
 > other
     ^(self compareBytesTo: other) = 1.
+------------------------
+hash
+    ^self hashBytes.
 ------------------------
 
 Class: Character
@@ -345,17 +357,20 @@ abs
 asString: radix
     | result value |
 
-    result := ''.
-    (self < 0) ifTrue: [ result := '-' ].
+    result := StringBuilder new.
+    (self < 0) ifTrue: [ result append: '-' ].
 
     value := self abs.
 
     [ value >= radix ] whileTrue:
-        [   result := (Character digitValue: value % radix) asString , result.
+        [   result prepend: (Character digitValue: value % radix).
             value := value // radix. ].
 
-    result := (Character digitValue: value) asString, result.
-    ^result.
+    result prepend: (Character digitValue: value).
+    ^result asString.
+------------------------
+asString
+    ^self asString: 10.
 ------------------------
 to: other do: aBlock
     other >= self ifTrue:  [ self to: other by:  1 do: aBlock ]
@@ -364,7 +379,7 @@ to: other do: aBlock
 to: other by: delta do: aBlock
     | index |
     index := self.
-    [ index != other ] whileTrue: [ aBlock value: index. index := index + delta ].
+    [ index <> other ] whileTrue: [ aBlock value: index. index := index + delta ].
 ------------------------
 to: other contains: aValue
     ^(aValue >= self) & (aValue <= other).
@@ -465,6 +480,17 @@ y: newY
 + aPoint
     ^Point x: x + aPoint x y: y + aPoint y.
 ------------------------
+* aScalar
+    ^Point x: x * aScalar y: y * aScalar.
+------------------------
+asString
+    | builder |
+    builder := StringBuilder new.
+    builder append: x.
+    builder append: '@'.
+    builder append: y.
+    ^builder asString.
+------------------------
 
 Class: Rectangle
 Superclass: Object
@@ -475,8 +501,8 @@ Class Methods: Rectangle
 origin: aPoint dimensions: anotherPoint
     | rect |
     rect := self new.
-    rect origin: origin.
-    rect dimensions: dimensions.
+    rect origin: aPoint.
+    rect dimensions: anotherPoint.
     ^rect.
 ------------------------
 
@@ -632,9 +658,57 @@ filter: aFilterBlock do: aBlock
 withHash: aHash loop: aBlock
     | index |
 
-    index := aHash % self size.
+    index := (aHash % self size) + 1.
     index to: self size do: aBlock.
     1 to: (index - 1) do: aBlock.
+------------------------
+
+Class: SymbolTable
+Superclass: Object
+Instance Fields: tally table
+
+Methods: SymbolTable
+------------------------
+init
+    tally := 0.
+    table := Array new: 32.
+------------------------
+do: aBlock
+    table filter: [ :symbol | symbol notNil ] do: [ :symbol | aBlock value: symbol ].
+------------------------
+at: aString
+    | symbol |
+    table withHash: (aString hash) loop: [ :i |
+         symbol := table at: i.
+         symbol isNil ifTrue: [
+            symbol := Symbol forString: aString.
+            table at: i put: symbol.
+            self incrementTally.
+            ^symbol.
+         ].
+
+         (symbol compareBytesTo: aString = 0) ifTrue: [ ^symbol ].
+    ].
+
+    self error: 'Symbol table overflow'.
+------------------------
+incrementTally
+    tally := tally + 1.
+    (tally > (table size * 3 // 4)) ifTrue: [ self grow ].
+------------------------
+grow
+    | oldTable |
+    oldTable := table.
+    table := Array new: table size + 256.
+    oldTable filter: [ :symbol | symbol notNil ] do: [ :symbol | self insert: symbol ].
+------------------------
+insert: aSymbol
+   | association |
+   table withHash: aSymbol hashBytes loop: [ :i |
+        (table at: i isNil) ifTrue: [ table at: i put: aSymbol. ^i ].
+   ].
+
+   self error: 'Symbol table overflow'.
 ------------------------
 
 Class: Dictionary
@@ -652,7 +726,7 @@ do: aBlock
 ------------------------
 associationAt: aKey
     | association |
-    table withHash: aKey hash loop: [ :i |
+    table withHash: (aKey hash) loop: [ :i |
          association := table at: i.
          association isNil ifTrue: [
             association := Association forKey: aKey.
@@ -661,7 +735,7 @@ associationAt: aKey
             ^association.
          ].
 
-         association key = key ifTrue: [ ^association. ].
+         (association key = aKey) ifTrue: [ ^association. ].
     ].
 
     self error: 'Dictionary overflow'.
@@ -680,8 +754,8 @@ at: aKey
    | association |
    table withHash: aKey hash loop: [ :i |
         association := table at: i.
-        association isNil ifTrue: [ ^nil ].
-        association key = key ifTrue: [ ^association value ].
+        (association isNil) ifTrue: [ ^nil ].
+        (association key = aKey) ifTrue: [ ^association value ].
    ].
 ------------------------
 at: aKey put: aValue
@@ -691,8 +765,8 @@ remove: aKey
     | association |
     table withHash: aKey hash loop: [ :i |
         association := table at: i.
-        association isNil ifTrue: [ ^nil ].
-        association key = key ifTrue: [
+        (association isNil) ifTrue: [ ^nil ].
+        (association key = aKey) ifTrue: [
             table at: i put: nil.
             tally := tally - 1.
             ^association value ].
@@ -746,3 +820,94 @@ value: aValue
 asString
     ^(key asString , ': ', value asString).
 ------------------------
+
+Class: System
+Superclass: Object
+
+Class Methods: System
+------------------------
+allClasses
+    SmallTalk do: [ :a | (a value is: Class) ifTrue: [ Terminal at: 0 @ 0 color: 0 put: a key plainString ] ].
+------------------------
+
+Class: ByteArray
+Superclass: Object
+
+Class: StringBuilder
+Superclass: Object
+Instance Fields: buffer index
+
+Class Methods: StringBuilder
+------------------------
+with: anObject
+    ^self new append: anObject.
+------------------------
+
+Methods: StringBuilder
+------------------------
+init
+    buffer := ByteArray alloc: 16.
+    index := 1.
+    ^self.
+------------------------
+ensureSpace: length
+    | requiredBlocks freeSpace oldBuffer |
+    freeSpace := buffer size - index.
+    (length >= freeSpace) ifTrue: [
+        requiredBlocks := ((buffer size + length - freeSpace) % 16) + 1.
+        oldBuffer := buffer.
+        buffer := ByteArray alloc: 16 * requiredBlocks.
+        oldBuffer transferBytesTo: buffer index: 1 destIndex: 1 length: oldBuffer size.
+    ].
+------------------------
+append: anObject
+    | string |
+    string := anObject asString.
+    self ensureSpace: string length.
+    string transferBytesTo: buffer index: 1 destIndex: index length: string length.
+    index := index + string length.
+    ^self.
+------------------------
+prepend: anObject
+    | string |
+    string := anObject asString.
+    self ensureSpace: string length.
+    buffer transferBytesTo: buffer index: 1 destIndex: string length + 1 length: index - 1.
+    string transferBytesTo: buffer index: 1 destIndex: 1 length: string length.
+    index := index + string length.
+    ^self.
+------------------------
+asString
+    | string |
+    string := String alloc: index.
+    buffer transferBytesTo: string index: 1 destIndex: 1 length: index - 1.
+    ^string.
+------------------------
+
+Class: Stream
+Superclass: Object
+
+Methods: Stream
+------------------------
+hasNext
+    ^false.
+------------------------
+next
+    ^nil.
+------------------------
+
+Class: Stage
+Superclass: Stream
+Instance Fields: source block
+
+Methods: Stream
+------------------------
+hasNext
+    ^false.
+------------------------
+next
+    ^nil.
+------------------------
+
+
+
