@@ -123,6 +123,7 @@ namespace pimii {
 
         ObjectPointer symbolTableType = makeType(objectType, "SymbolTable", 2, TYPE_SIZE);
         symbols.installTypes(symbolTableType, arrayType, symbolType);
+        dictionary.atPut(symbols.lookup("Symbols"), dictionary.getDictionary());
 
         ObjectPointer systemDictionaryType = makeType(objectType, "IdentityDictionary", 2,
                                                       TYPE_SIZE);
