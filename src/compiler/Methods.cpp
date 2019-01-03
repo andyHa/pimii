@@ -25,7 +25,7 @@ namespace pimii {
         ObjectPointer selectors = type[System::TYPE_FIELD_SELECTORS];
         ObjectPointer methods = type[System::TYPE_FIELD_METHODS];
 
-        for (Looping loop = Looping(selectors.size(), selector.hash()); loop.hasNext(); loop.next()) {
+        for (Looping loop = Looping(selectors.size(), selector.id()); loop.hasNext(); loop.next()) {
             if (selectors[loop()] == selector) {
                 methods[loop()] = compiledMethod;
                 return;

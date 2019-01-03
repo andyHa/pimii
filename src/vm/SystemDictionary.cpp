@@ -17,7 +17,7 @@ namespace pimii {
     ObjectPointer SystemDictionary::atPut(ObjectPointer key, ObjectPointer value, bool force) {
         ObjectPointer table = dictionary[System::DICTIONARY_FIELD_TABLE];
 
-        for (Looping loop = Looping(table.size(), key.hash()); loop.hasNext(); loop.next()) {
+        for (Looping loop = Looping(table.size(), key.id()); loop.hasNext(); loop.next()) {
             ObjectPointer association = table[loop()];
             if (association == Nil::NIL) {
                 ObjectPointer newAssociation = mm.makeObject(System::ASSOCIATION_SIZE, associationType);
@@ -60,7 +60,7 @@ namespace pimii {
     void SystemDictionary::reInsert(ObjectPointer table, ObjectPointer association) {
         ObjectPointer key = association[System::ASSOCIATION_FIELD_KEY];
 
-        for (Looping loop = Looping(table.size(), key.hash()); loop.hasNext(); loop.next()) {
+        for (Looping loop = Looping(table.size(), key.id()); loop.hasNext(); loop.next()) {
             if (table[loop()] == Nil::NIL) {
                 table[loop()] = association;
                 return;

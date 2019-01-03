@@ -306,7 +306,7 @@ namespace pimii {
         }
 
         inline SmallInteger id() const noexcept {
-            return static_cast<SmallInteger>(data);
+            return SmallIntegers::toSafeSmallInteger(data);
         }
 
     };

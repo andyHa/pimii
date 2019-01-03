@@ -288,7 +288,7 @@ namespace pimii {
 
     ObjectPointer Interpreter::findMethodInType(ObjectPointer type, ObjectPointer selector) {
         ObjectPointer selectors = type[System::TYPE_FIELD_SELECTORS];
-        for (Looping loop = Looping(selectors.size(), selector.hash()); loop.hasNext(); loop.next()) {
+        for (Looping loop = Looping(selectors.size(), selector.id()); loop.hasNext(); loop.next()) {
             if (selectors[loop()] == selector) {
                 return type[System::TYPE_FIELD_METHODS][loop()];
             } else if (selectors[loop()] == Nil::NIL) {
