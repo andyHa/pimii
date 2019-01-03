@@ -687,7 +687,7 @@ at: aString
             ^symbol.
          ].
 
-         (symbol compareBytesTo: aString = 0) ifTrue: [ ^symbol ].
+         ((symbol compareBytesTo: aString) = 0) ifTrue: [ ^symbol ].
     ].
 
     self error: 'Symbol table overflow'.
