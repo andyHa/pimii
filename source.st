@@ -179,21 +179,21 @@ from: start to: end
     start := 1 max: start.
     end := self length min: end.
     substring := String alloc: end - start + 2.
-    self transferBytesTo: substring index: start destIndex: 0 length: end - start + 1.
+    self transferBytesTo: substring index: start destIndex: 1 length: end - start + 1.
     ^substring.
 ------------------------
 left: length
-    length >= self length ifTrue: [ ^self ].
-    length <= self length negated ifTrue: [ ^String empty ].
-    length > 0 ifTrue: [ ^self from: 1 to: length ].
-    length < 0 ifTrue: [ ^self from: length abs to: self length ].
+    (length >= self length) ifTrue: [ ^self ].
+    (length <= self length negated) ifTrue: [ ^String empty ].
+    (length > 0) ifTrue: [ ^self from: 1 to: length ].
+    (length < 0) ifTrue: [ ^self from: length abs + 1 to: self length ].
     ^String empty.
 ------------------------
 right: length
-    length >= self length ifTrue: [ ^self ].
-    length <= self length negated ifTrue: [ ^String empty ].
-    length > 0 ifTrue: [ ^self from: self length - length to: self length ].
-    length > 0 ifTrue: [ ^self from: 1 to: self length + length ].
+    (length >= self length) ifTrue: [ ^self ].
+    (length <= self length negated) ifTrue: [ ^String empty ].
+    (length > 0) ifTrue: [ ^self from: self length - length to: self length ].
+    (length < 0) ifTrue: [ ^self from: 1 to: self length + length ].
     ^String empty.
 ------------------------
 < other
