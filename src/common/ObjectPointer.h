@@ -49,7 +49,7 @@ namespace pimii {
         };
 
         struct Object {
-            SmallInteger size;
+            Word size;
             Word type;
             Word fields[];
         };
@@ -108,8 +108,8 @@ namespace pimii {
 
         ObjectPointer(const void* object, ObjectPointer type, SmallInteger numberOfFields) noexcept : data(
                 ((Word) object) | OBJECT) {
-            unmask()->size = numberOfFields;
-            unmask()->type = *reinterpret_cast<Word*>(&type);
+            unmask()->size = static_cast<Word>(numberOfFields);
+            unmask()->type = reinterpret_cast<Word&>(type);
         };
 
         ObjectPointer(const void* object, ObjectPointer type, SmallInteger wordSize, SmallInteger odd) noexcept : data(

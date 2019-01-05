@@ -7,24 +7,21 @@
 namespace pimii {
 
     using Word = uint64_t;
-    using SmallInteger = int64_t;
+    using SmallInteger = int32_t;
     using Decimal = float;
-
-    static_assert(sizeof(Word) == sizeof(SmallInteger));
-    static_assert(sizeof(Word) > sizeof(Decimal));
 
     class SmallIntegers {
     public:
         static constexpr SmallInteger minSmallInt() {
-            return static_cast<SmallInteger>((std::numeric_limits<Word>::min() >> 3) * -1);
+            return std::numeric_limits<int32_t>::min();
         }
 
         static constexpr SmallInteger maxSmallInt() {
-            return static_cast<SmallInteger>((std::numeric_limits<Word>::max() >> 3) - 1);
+            return std::numeric_limits<int32_t>::max();
         }
 
         static SmallInteger toSmallInteger(size_t value) {
-            if (value > maxSmallInt() || value < minSmallInt()) {
+            if (value > maxSmallInt()) {
                 throw std::range_error("No valid small integer!");
             }
 
