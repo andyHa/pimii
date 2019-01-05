@@ -30,6 +30,9 @@ namespace pimii {
 
         void installTypes(ObjectPointer symbolTableType, ObjectPointer arrayType, ObjectPointer symbolType);
 
+        ObjectPointer getSymbolTable() {
+            return symbolTable;
+        }
     };
 }
 
