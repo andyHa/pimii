@@ -84,7 +84,7 @@ namespace pimii {
 
         // Create "String"
         completeType(stringType, objectType, "String", TYPE_SIZE + 1, 0);
-        stringType[STRING_TYPE_EMPTY_STRING_FIELD] = mm.makeBuffer(0, stringType);
+        stringType[STRING_TYPE_EMPTY_STRING_FIELD] = mm.makeBuffer(1, stringType);
 
         // Create "Association"
         completeType(associationType, objectType, "Association", TYPE_SIZE, System::ASSOCIATION_SIZE);
