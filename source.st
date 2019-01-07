@@ -147,6 +147,16 @@ forString: aString
     ^symbol.
 ------------------------
 
+Class: String
+Superclass: Object
+Class Fields: empty
+
+Class Methods: String
+------------------------
+empty
+    ^empty.
+------------------------
+
 Methods: String
 ------------------------
 asString
@@ -182,6 +192,9 @@ from: start to: end
     self transferBytesTo: substring index: start destIndex: 1 length: end - start + 1.
     ^substring.
 ------------------------
+isEmpty
+    ^self length = 0.
+------------------------
 left: length
     (length >= self length) ifTrue: [ ^self ].
     (length <= self length negated) ifTrue: [ ^String empty ].
@@ -196,6 +209,68 @@ right: length
     (length < 0) ifTrue: [ ^self from: 1 to: self length + length ].
     ^String empty.
 ------------------------
+startsWith: aString
+    (aString isEmpty) ifTrue: [ ^true ].
+    (aString length > self length) ifTrue: [ ^false ].
+    1 to: aString length do: [ :index |
+        ((aString at: index) = (self at: index)) ifFalse: [ ^false ].
+    ].
+
+    ^true.
+------------------------
+endsWith: aString
+    | checkIndex |
+    (aString isEmpty) ifTrue: [ ^true ].
+    (aString length > self length) ifTrue: [ ^false ].
+    checkIndex := self length.
+    aString length to: 1 do: [ :index |
+        ((aString at: index) = (self at: checkIndex)) ifFalse: [ ^false ].
+        checkIndex := checkIndex - 1.
+    ].
+
+    ^true.
+------------------------
+indexOf: aString
+    ^0.
+------------------------
+contains: aString
+    ^false.
+------------------------
+toUpperCase
+    | result |
+    result := String alloc: self size.
+    1 to: self length do: [ :index | result at: index put: ((self at: index) toUpperCase) ].
+    ^result.
+------------------------
+toLowerCase
+    | result |
+    result := String alloc: self size.
+    1 to: self length do: [ :index | result at: index put: ((self at: index) toLowerCase) ].
+    ^result.
+------------------------
+leftPadWith: aCharacter to: size
+    (self length >= size) ifTrue: [ ^self ].
+
+    ^(aCharacter repeat: size - self length) , self.
+------------------------
+rightPadWith: aCharacter to: size
+    (self length >= size) ifTrue: [ ^self ].
+
+    ^self , (aCharacter repeat: size - self length).
+------------------------
+centerPadWith: aCharacter to: size
+    | half |
+    (self length >= size) ifTrue: [ ^self ].
+    half := (size - self length) // 2.
+
+    ^(aCharacter repeat: half) , self , (aCharacter repeat: size - self length - half).
+------------------------
+limitTo: size
+    (self length <= size) ifTrue: [ ^self ].
+
+    ^self from: 1 to: size.
+------------------------
+
 < other
     ^(self compareBytesTo: other) = -1.
 ------------------------
@@ -233,7 +308,6 @@ digitValue: aValue
 ------------------------
 
 
-
 Methods: Character
 ------------------------
 value
@@ -244,6 +318,14 @@ isDigit
 ------------------------
 isUpper
     ^65 to: 90 contains: value.
+------------------------
+toLowerCase
+    self isUpper ifTrue: [ ^Character asChar: value + 32 ].
+    ^self.
+------------------------
+toUpperCase
+    self isLower ifTrue: [ ^Character asChar: value - 32 ].
+    ^self.
 ------------------------
 isLower
     ^97 to: 122 contains: value.
@@ -258,6 +340,12 @@ asString
     | result |
     result := String alloc: 2.
     result at: 1 put: self.
+    ^result.
+------------------------
+repeat: amount
+    | result |
+    result := String alloc: amount + 1.
+    1 to: amount do: [ :index | result at: index put: self ].
     ^result.
 ------------------------
 
@@ -358,8 +446,6 @@ asString: radix
     | result value |
 
     result := StringBuilder new.
-    (self < 0) ifTrue: [ result append: '-' ].
-
     value := self abs.
 
     [ value >= radix ] whileTrue:
@@ -367,19 +453,25 @@ asString: radix
             value := value // radix. ].
 
     result prepend: (Character digitValue: value).
+    (self < 0) ifTrue: [ result prepend: '-' ].
     ^result asString.
 ------------------------
 asString
     ^self asString: 10.
 ------------------------
 to: other do: aBlock
-    other >= self ifTrue:  [ self to: other by:  1 do: aBlock ]
-                  ifFalse: [ self to: other by: -1 do: aBlock ].
+    (other >= self) ifTrue:  [ self to: other     by: 1 do: aBlock ]
+                    ifFalse: [ self downTo: other by: 1 do: aBlock ].
 ------------------------
 to: other by: delta do: aBlock
     | index |
     index := self.
-    [ index <> other ] whileTrue: [ aBlock value: index. index := index + delta ].
+    [ index <= other ] whileTrue: [ aBlock value: index. index := index + delta ].
+------------------------
+downTo: other by: delta do: aBlock
+    | index |
+    index := self.
+    [ index >= other ] whileTrue: [ aBlock value: index. index := index - delta ].
 ------------------------
 to: other contains: aValue
     ^(aValue >= self) & (aValue <= other).
