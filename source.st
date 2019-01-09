@@ -251,12 +251,12 @@ toLowerCase
 leftPadWith: aCharacter to: size
     (self length >= size) ifTrue: [ ^self ].
 
-    ^(aCharacter repeat: size - self length) , self.
+    ^self , (aCharacter repeat: size - self length).
 ------------------------
 rightPadWith: aCharacter to: size
     (self length >= size) ifTrue: [ ^self ].
 
-    ^self , (aCharacter repeat: size - self length).
+    ^(aCharacter repeat: size - self length) , self.
 ------------------------
 centerPadWith: aCharacter to: size
     | half |
@@ -519,14 +519,20 @@ size
 at: aPoint color: aColorIndex put: aString
     <Primitive:48>
 ------------------------
-showCursor
+box: aRectangle color: aColorIndex
     <Primitive:49>
 ------------------------
-hideCursor
+at: aPoint color: aColorIndex put: aString leftAligned: length
+    self at: aPoint color: aColorIndex put: ((aString leftPadWith: $32 to: length) limitTo: length).
+------------------------
+showCursor
     <Primitive:50>
 ------------------------
-draw
+hideCursor
     <Primitive:51>
+------------------------
+draw
+    <Primitive:52>
 ------------------------
 
 Class: InputEvent

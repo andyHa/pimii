@@ -23,24 +23,13 @@ namespace pimii {
     class MethodHeader {
         SmallInteger header;
 
-        static constexpr SmallInteger LARGE_CONTEXT_FLAG_BIT = 0x40000;
-
     public:
-        static SmallInteger forByteCodes(SmallInteger numTemporaries, bool largeContextFlag) {
-            if (largeContextFlag) {
-                return LARGE_CONTEXT_FLAG_BIT | ((numTemporaries & 0xFF) << 2) | MT_BYTECODES;
-            } else {
-                return ((numTemporaries & 0xFF) << 2) | MT_BYTECODES;
-            }
+        static SmallInteger forByteCodes(SmallInteger numTemporaries) {
+            return ((numTemporaries & 0xFF) << 2) | MT_BYTECODES;
         }
 
-        static SmallInteger forPrimitive(SmallInteger primitiveIndex, SmallInteger numTemporaries, bool largeContextFlag) {
-            if (largeContextFlag) {
-                return LARGE_CONTEXT_FLAG_BIT | ((primitiveIndex & 0xFF) << 10) | ((numTemporaries & 0xFF) << 2) |
-                       MT_PRIMITIVE;
-            } else {
-                return ((primitiveIndex & 0xFF) << 10) | ((numTemporaries & 0xFF) << 2) | MT_PRIMITIVE;
-            }
+        static SmallInteger forPrimitive(SmallInteger primitiveIndex, SmallInteger numTemporaries) {
+            return ((primitiveIndex & 0xFF) << 10) | ((numTemporaries & 0xFF) << 2) | MT_PRIMITIVE;
         }
 
         MethodHeader(SmallInteger header) : header(header) {}
@@ -63,10 +52,6 @@ namespace pimii {
 
         SmallInteger fieldIndex() {
             return static_cast<SmallInteger>((header >> 2) & 0xFF);
-        }
-
-        bool largeContextFlag() {
-            return (header & LARGE_CONTEXT_FLAG_BIT) == LARGE_CONTEXT_FLAG_BIT;
         }
 
         SmallInteger value() {

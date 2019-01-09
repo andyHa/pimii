@@ -38,8 +38,9 @@ int main() {
     std::vector<pimii::Error> errors;
     pimii::Tokenizer tokenizer(
 //            "[ [ true ] whileTrue: [ InputSemaphore wait. [ Terminal nextEvent] whileNotNil: [ :event | Terminal at: 0 @ 0 color: 0 put: event key asString. Terminal draw. ]. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
-          //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
-            "Terminal at: 0 @ 0 color: 0 put: (255 asString: 16) . Terminal draw.",
+            //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
+            //   "Terminal at: 0 @ 0 color: 0 put: ((Rectangle origin: 16@1 dimensions: 10@10) intersects: (Rectangle origin: 5@5 dimensions: 10@10) ) asString.",
+            "Terminal box: (Rectangle origin: 0 @ 0 dimensions: 10 @ 10) color: 1. Terminal draw.",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, sys.typeArray());
@@ -47,7 +48,7 @@ int main() {
     //pimii::Compiler compiler("xx [ :a :b | a + b] value: 3 value: 4", pimii::Nil::NIL);
 //    pimii::ObjectPointer method = compiler.compile(sys);
     pimii::Interpreter interpreter(sys);
-    pimii::ObjectPointer context = sys.memoryManager().makeObject(pimii::System::CONTEXT_FIXED_SIZE + 8,
+    pimii::ObjectPointer context = sys.memoryManager().makeObject(pimii::System::CONTEXT_SIZE,
                                                                   pimii::Nil::NIL);
     context[pimii::System::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
     context[pimii::System::CONTEXT_SP_FIELD] = pimii::ObjectPointer::forSmallInt(0);
@@ -55,40 +56,42 @@ int main() {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     //interpreter.newActiveContext(context);
 
-  //  initscr();
-  //  cbreak();
-  //  noecho();
+    initscr();
+    cbreak();
+    noecho();
+    timeout(0);
+    start_color();
 
     // Enables keypad mode. This makes (at least for me) mouse events getting
     // reported as KEY_MOUSE, instead as of random letters.
-   // keypad(stdscr, TRUE);
+  // keypad(stdscr, TRUE);
 
     // Don't mask any mouse events
-    //mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
+ //  mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
-  //  printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
+  //    printf("\033[?1003h\n"); // Makes the terminal report mouse movement events
+//
+//    std::thread([&sys]() {
+//        while (true) {
+//            sys.fireTimer();
+//            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+//        }
+//    }).detach();
+//
+//    std::thread([&interpreter]() {
+//        while (true) {
+//            interpreter.updateMetrics();
+//            std::this_thread::sleep_for(std::chrono::seconds(1));
+//        }
+//    }).detach();
 
-    std::thread([&sys]() {
-        while (true) {
-            sys.fireTimer();
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        }
-    }).detach();
-
-    std::thread([&interpreter]() {
-        while (true) {
-            interpreter.updateMetrics();
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    }).detach();
-
-    std::thread([&sys]() {
-        while (true) {
-            int c = wgetch(stdscr);
-            sys.recordInputEvent(pimii::InputEvent::keyPressed(c));
-        }
-    }).detach();
-
+    /*  std::thread([&sys]() {
+          while (true) {
+              int c = wgetch(stdscr);
+              sys.recordInputEvent(pimii::InputEvent::keyPressed(c));
+          }
+      }).detach();
+  */
     try {
         interpreter.run(context);
     } catch (const std::exception& e) {

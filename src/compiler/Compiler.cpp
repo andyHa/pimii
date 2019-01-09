@@ -56,9 +56,8 @@ namespace pimii {
         Methods methods(system.memoryManager(), system);
         return methods.createMethod(
                 primitiveIndex >= 0 ? MethodHeader::forPrimitive((SmallInteger) primitiveIndex,
-                                                                 context.getMaxTemporaries(),
-                                                                 false)
-                                    : MethodHeader::forByteCodes(context.getMaxTemporaries(), false),
+                                                                 context.getMaxTemporaries())
+                                    : MethodHeader::forByteCodes(context.getMaxTemporaries()),
                 type, system.symbolTable().lookup(selector),
                 context.getLiterals(), context.getOpCodes());
     }
@@ -199,6 +198,10 @@ namespace pimii {
 
         if (tokenizer.current().type == LITERAL_STRING) {
             return std::unique_ptr<Expression>(new LiteralString(tokenizer.consume().value));
+        }
+
+        if (tokenizer.current().type == LITERAL_CHARACTER) {
+            return std::unique_ptr<Expression>(new LiteralCharacter(tokenizer.consume().value));
         }
 
         if (tokenizer.current().type == LITERAL_SYMBOL) {

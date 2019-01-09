@@ -74,6 +74,10 @@ namespace pimii {
             return readString();
         }
 
+        if (reader.current() == '$') {
+            return readCharacter();
+        }
+
         if (reader.current() == ';') {
             reader.consume();
             return {line, SEMICOLON, ";"};
@@ -142,9 +146,26 @@ namespace pimii {
         return {line, INVALID, invalid};
     }
 
+    Token Tokenizer::readCharacter() {
+        reader.consume();
+        std::string str;
+        if (isdigit(reader.current()) && isdigit(reader.next())) {
+            while(isdigit(reader.current())) {
+                str += reader.consume();
+            }
+        } else {
+            if (reader.current() != 0) {
+                str += reader.consume();
+            } else {
+                str = " ";
+            }
+        }
+        return {line, LITERAL_CHARACTER, str};
+    }
+
     Token Tokenizer::readString() {
         reader.consume();
-        std::__1::string str;
+        std::string str;
         while (reader.current() != '\'' && reader.current() != 0 && reader.current() != '\n') {
             if (reader.current() == '\\') {
                 reader.consume();

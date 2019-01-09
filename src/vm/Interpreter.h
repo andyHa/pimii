@@ -33,6 +33,8 @@ namespace pimii {
         SmallInteger instuctionsExecuted;
         SmallInteger instuctionsPerSecond;
 
+        std::chrono::steady_clock::time_point lastTimer;
+
         uint8_t fetchInstruction();
 
         void dispatchInstruction(uint8_t opCode);

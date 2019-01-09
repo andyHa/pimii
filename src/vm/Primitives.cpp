@@ -277,7 +277,7 @@ namespace pimii {
         }
 
         SmallInteger length = interpreter.pop().smallInt();
-        SmallInteger destIndex = interpreter.pop().smallInt() -1;
+        SmallInteger destIndex = interpreter.pop().smallInt() - 1;
         SmallInteger index = interpreter.pop().smallInt() - 1;
         ObjectPointer dest = interpreter.pop();
         ObjectPointer self = interpreter.stackTop();
@@ -619,16 +619,70 @@ namespace pimii {
         }
 
         ObjectPointer string = interpreter.pop();
-        ObjectPointer colorIndex = interpreter.pop();
+        SmallInteger colorIndex = interpreter.pop().smallInt();
         ObjectPointer point = interpreter.pop();
 
-        if (!sys.is(point, sys.typePoint()) || !colorIndex.isSmallInt() || !sys.is(string, sys.typeString())) {
+        if (!sys.is(point, sys.typePoint()) || !sys.is(string, sys.typeString())) {
             interpreter.unPop(3);
             return false;
         }
 
-        std::cout <<  string.stringView() << std::endl;
-        //mvaddstr(point[1].smallInt(), point[0].smallInt(), string.stringView().data());
+        //std::cout <<  string.stringView() << std::endl;
+        init_pair(1, COLOR_WHITE, COLOR_RED);
+        bool bold = colorIndex > 16;
+        if (bold) {
+            colorIndex = colorIndex - 16;
+            attron(A_BOLD);
+        }
+        attron(COLOR_PAIR(colorIndex));
+        mvaddstr(point[1].smallInt(), point[0].smallInt(), string.stringView().data());
+        attroff(COLOR_PAIR(colorIndex));
+        if (bold) {
+            attroff(A_BOLD);
+        }
+
+        return true;
+    }
+
+    bool Primitives::terminalShowBox(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 2) {
+            return false;
+        }
+
+        SmallInteger colorIndex = interpreter.pop().smallInt();
+        ObjectPointer rect = interpreter.pop();
+
+        SmallInteger x = rect[0][0].smallInt();
+        SmallInteger y = rect[0][1].smallInt();
+        SmallInteger width = rect[1][0].smallInt();
+        SmallInteger height = rect[1][1].smallInt();
+
+        init_pair(1, COLOR_WHITE, COLOR_RED);
+        bool bold = colorIndex > 16;
+        if (bold) {
+            colorIndex = colorIndex - 16;
+            attron(A_BOLD);
+        }
+        attron(COLOR_PAIR(colorIndex));
+        mvaddch(y, x, ACS_ULCORNER);
+        mvaddch(y, x + width, ACS_URCORNER);
+        for (SmallInteger cx = x + 1; cx < x + width; cx++) {
+            mvaddch(y, cx, ACS_HLINE);
+        }
+        for (SmallInteger cy = y + 1; cy < y + height; cy++) {
+            mvaddch(cy, x, ACS_VLINE);
+            mvaddch(cy, x + width, ACS_VLINE);
+        }
+        mvaddch(y + height, x, ACS_LLCORNER);
+        mvaddch(y + height, x + width, ACS_LRCORNER);
+        for (SmallInteger cx = x + 1; cx < x + width; cx++) {
+            mvaddch(y + height, cx, ACS_HLINE);
+        }
+        attroff(COLOR_PAIR(colorIndex));
+        if (bold) {
+            attroff(A_BOLD);
+        }
+
         return true;
     }
 

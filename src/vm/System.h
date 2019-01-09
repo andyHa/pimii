@@ -32,11 +32,20 @@ namespace pimii {
             return {KEY, key, 0, 0, 0};
         }
 
-        static InputEvent m(SmallInteger key) {
-            return {KEY, key, 0, 0, 0};
-        }
+    };
 
+    enum OutputEventType : SmallInteger {
+        SHOW_STRING, SHOW_BOX, MOVE_CURSOR, SHOW_CURSOR, HIDE_CURSOR, DRAW
+    };
 
+    struct OutputEvent {
+        SmallInteger type;
+        SmallInteger col;
+        SmallInteger row;
+        SmallInteger width;
+        SmallInteger height;
+        SmallInteger colorIndex;
+        std::string string;
     };
 
     class System {
@@ -72,8 +81,9 @@ namespace pimii {
         bool notifyTimerSemaphore;
         bool notifyInputSemaphore;
         std::mutex inputEventsMutex;
-        std::deque<InputEvent> inputEvents;
         std::condition_variable interruptReceived;
+        std::deque<InputEvent> inputEvents;
+        std::deque<OutputEvent> outputEvents;
 
         void
         completeType(ObjectPointer type, ObjectPointer superType, const std::string& name,
@@ -118,6 +128,7 @@ namespace pimii {
         static constexpr SmallInteger COMPILED_METHOD_TYPE_FIELD_SPECIAL_SELECTORS = TYPE_SIZE;
 
         static constexpr SmallInteger CONTEXT_FIXED_SIZE = 6;
+        static constexpr SmallInteger CONTEXT_SIZE = 32;
         static constexpr SmallInteger CONTEXT_SENDER_FIELD = 0;
         static constexpr SmallInteger CONTEXT_CALLER_FIELD = 0;
         static constexpr SmallInteger CONTEXT_IP_FIELD = 1;
@@ -193,7 +204,8 @@ namespace pimii {
         static constexpr SmallInteger PRIMITIVE_TERMINAL_NEXT_EVENT = PRIMITIVE_TRANSFER + 1;
         static constexpr SmallInteger PRIMITIVE_TERMINAL_SIZE = PRIMITIVE_TERMINAL_NEXT_EVENT + 1;
         static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_STRING = PRIMITIVE_TERMINAL_SIZE + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_CURSOR = PRIMITIVE_TERMINAL_SHOW_STRING + 1;
+        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_BOX = PRIMITIVE_TERMINAL_SHOW_STRING + 1;
+        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_CURSOR = PRIMITIVE_TERMINAL_SHOW_BOX + 1;
         static constexpr SmallInteger PRIMITIVE_TERMINAL_HIDE_CURSOR = PRIMITIVE_TERMINAL_SHOW_CURSOR + 1;
         static constexpr SmallInteger PRIMITIVE_TERMINAL_DRAW = PRIMITIVE_TERMINAL_HIDE_CURSOR + 1;
 

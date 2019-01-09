@@ -37,6 +37,7 @@ namespace pimii {
         LITERAL_BINARY,
         LITERAL_FLOAT,
         LITERAL_SYMBOL,
+        LITERAL_CHARACTER,
         ASSIGNMENT,
         OPERATOR,
         SEPARATOR,
@@ -95,6 +96,8 @@ namespace pimii {
         bool isOperator(char ch);
 
         Token readString();
+
+        Token readCharacter();
 
     public:
         Tokenizer(std::string_view input, std::vector<Error>& errors) : input(input), reader(input), line(1),

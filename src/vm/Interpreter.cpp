@@ -5,6 +5,10 @@
 #include <array>
 #include <iostream>
 #include <sstream>
+#include <thread>
+
+#include <ncurses.h>
+
 #include "Interpreter.h"
 #include "Primitives.h"
 #include "../common/Looping.h"
@@ -19,6 +23,8 @@ namespace pimii {
     }
 
     void Interpreter::run(ObjectPointer rootContext) {
+        lastTimer = std::chrono::steady_clock::now();
+        //std::chrono::steady_clock::time_point lastTimer = std::chrono::steady_clock::now();
         rootProcess = system.memoryManager().makeObject(System::PROCESS_SIZE, system.typeProcess());
         rootProcess[System::PROCESS_FIELD_CONTEXT] = rootContext;
         rootProcess[System::PROCESS_FIELD_TIME] = 0;
@@ -28,7 +34,7 @@ namespace pimii {
         contextSwitchExpected = true;
 
         while (true) { //TODO for rootProcess done
-            if (!contextSwitchExpected && system.shouldNotifySemaphore()) {
+            if (!contextSwitchExpected) {
                 notifySemaphores();
             }
 
@@ -55,17 +61,21 @@ namespace pimii {
     }
 
     void Interpreter::notifySemaphores() {
-        if (system.shouldNotifyTimerSemaphore()) {
+        std::chrono::milliseconds delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastTimer);
+
+        if (delta.count() > 200) {
             ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_TIMER_SEMAPHORE];
             signalSemaphore(semaphore);
+            lastTimer = std::chrono::steady_clock::now();
+        } else {
+            int c = getch();
+            if (c != ERR) {
+                ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_INPUT_SEMAPHORE];
+                signalSemaphore(semaphore);
+                // TODO add event to queue
+            }
         }
 
-        if (system.shouldNotifyInputSemaphore()) {
-            ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_INPUT_SEMAPHORE];
-            signalSemaphore(semaphore);
-        }
-
-        system.clearNotifications();
     }
 
     void Interpreter::handleContextSwitch() {
@@ -85,11 +95,10 @@ namespace pimii {
                 activeContext = activeProcess[System::PROCESS_FIELD_CONTEXT];
                 fetchContextRegisters();
             }
-            std::unique_lock<std::mutex> lock(irq_lock);
-            system.didReceiveInterrupt().wait(lock);
-            if (system.shouldNotifySemaphore()) {
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
                 notifySemaphores();
-            }
             nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                                    System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
         }
@@ -333,8 +342,7 @@ namespace pimii {
         //std::cout << "Sending " << selector.stringView() << std::endl;
 
         // TODO check if method is non-nil and has bytecodes
-        ObjectPointer newContext = system.memoryManager().makeObject(
-                System::CONTEXT_FIXED_SIZE + (header.largeContextFlag() ? 32 : 16), system.typeMethodContext());
+        ObjectPointer newContext = system.memoryManager().makeObject(System::CONTEXT_SIZE, system.typeMethodContext());
         newContext[System::CONTEXT_SENDER_FIELD] = activeContext;
         newContext[System::CONTEXT_IP_FIELD] = 0;
         newContext[System::CONTEXT_SP_FIELD] = header.temporaries();

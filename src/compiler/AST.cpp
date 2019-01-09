@@ -200,6 +200,18 @@ namespace pimii {
         ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
     }
 
+    void LiteralCharacter::emitByteCodes(EmitterContext& ctx) {
+        int ch;
+        if (name.length() > 1) {
+            ch = (int)stoi(name);
+        } else {
+            ch =  name[0];
+        }
+        ObjectPointer character = ctx.getSystem().typeCharacter()[System::TYPE_SIZE][ch];
+        SmallInteger index = ctx.addLiteral(character);
+        ctx.pushWithIndex(Interpreter::OP_PUSH_LITERAL_CONSTANT, index);
+    }
+
     void LiteralNumber::emitByteCodes(EmitterContext& ctx) {
         if (number == 0) {
             ctx.pushCompound(Interpreter::OP_PUSH, Interpreter::OP_PUSH_ZERO_INDEX);

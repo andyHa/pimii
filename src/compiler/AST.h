@@ -150,6 +150,14 @@ namespace pimii {
         void emitByteCodes(EmitterContext& ctx) override;
     };
 
+    struct LiteralCharacter : public Expression {
+        std::string name;
+    public:
+        LiteralCharacter(std::string name) : name(std::move(name)) {}
+
+        void emitByteCodes(EmitterContext& ctx) override;
+    };
+
     struct LiteralNumber : public Expression {
         SmallInteger number;
     public:
