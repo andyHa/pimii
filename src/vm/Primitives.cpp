@@ -605,8 +605,8 @@ namespace pimii {
         SmallInteger y;
         getmaxyx(stdscr, y, x);
 
-        point[0] = x;
-        point[1] = y;
+        point[0] = x - 1;
+        point[1] = y - 1;
         interpreter.pop();
         interpreter.push(point);
 
@@ -635,7 +635,7 @@ namespace pimii {
             attron(A_BOLD);
         }
         attron(COLOR_PAIR(colorIndex));
-        mvaddstr(point[1].smallInt(), point[0].smallInt(), string.stringView().data());
+        mvaddstr(point[1].smallInt() - 1, point[0].smallInt() - 1, string.stringView().data());
         attroff(COLOR_PAIR(colorIndex));
         if (bold) {
             attroff(A_BOLD);
@@ -652,8 +652,8 @@ namespace pimii {
         SmallInteger colorIndex = interpreter.pop().smallInt();
         ObjectPointer rect = interpreter.pop();
 
-        SmallInteger x = rect[0][0].smallInt();
-        SmallInteger y = rect[0][1].smallInt();
+        SmallInteger x = rect[0][0].smallInt() - 1;
+        SmallInteger y = rect[0][1].smallInt() - 1;
         SmallInteger width = rect[1][0].smallInt();
         SmallInteger height = rect[1][1].smallInt();
 

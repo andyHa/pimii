@@ -40,7 +40,7 @@ int main() {
 //            "[ [ true ] whileTrue: [ InputSemaphore wait. [ Terminal nextEvent] whileNotNil: [ :event | Terminal at: 0 @ 0 color: 0 put: event key asString. Terminal draw. ]. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
             //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
             //   "Terminal at: 0 @ 0 color: 0 put: ((Rectangle origin: 16@1 dimensions: 10@10) intersects: (Rectangle origin: 5@5 dimensions: 10@10) ) asString.",
-            "Terminal box: (Rectangle origin: 0 @ 0 dimensions: 10 @ 10) color: 1. Terminal draw.",
+            "Terminal box: (Rectangle origin: 1 @ 1 dimensions: (Terminal size)) color: 1. Terminal draw.",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, sys.typeArray());
