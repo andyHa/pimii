@@ -162,10 +162,14 @@ namespace pimii {
 
         inline Decimal decimal() const {
             if (getObjectPointerType() != DECIMAL) {
-                throw std::bad_cast();
+                return smallInt();
             }
 
             return (Decimal) (data >> 2);
+        }
+
+        bool isNumeric() const noexcept {
+            return isDecimal() || isSmallInt();
         }
 
         inline bool isObject() const noexcept {

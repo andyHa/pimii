@@ -23,7 +23,6 @@ namespace pimii {
         ObjectPointer receiver;
         ObjectPointer rootProcess;
         bool contextSwitchExpected;
-        std::mutex irq_lock;
 
         std::chrono::steady_clock::time_point startup;
         std::chrono::steady_clock::time_point lastContextSwitch;
@@ -34,6 +33,9 @@ namespace pimii {
         SmallInteger instuctionsPerSecond;
 
         std::chrono::steady_clock::time_point lastTimer;
+        bool inputAvailable;
+        std::deque<std::string> queuedInputs;
+        std::mutex inputQueueMutex;
 
         uint8_t fetchInstruction();
 
@@ -125,9 +127,7 @@ namespace pimii {
             return ip;
         }
 
-
         SmallInteger elapsedMicros();
-
 
         void newActiveContext(ObjectPointer context);
 
@@ -174,14 +174,6 @@ namespace pimii {
             }
         }
 
-        void unPop(SmallInteger number) {
-            if (sp + number >= activeContext.size()) {
-                throw std::overflow_error("stack overflow");
-            }
-
-            sp += number;
-        }
-
         SmallInteger stackPointer() {
             return sp;
         }
@@ -203,6 +195,10 @@ namespace pimii {
         }
 
         void notifySemaphores();
+
+        void queueInput(std::string input);
+
+        ObjectPointer nextQueuedInput();
 
         void handleContextSwitch();
     };

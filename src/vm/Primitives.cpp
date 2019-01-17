@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <ncurses.h>
+#include <cmath>
 #include "Primitives.h"
 
 namespace pimii {
@@ -17,151 +18,114 @@ namespace pimii {
         return true;
     }
 
-    bool Primitives::lessThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
+    bool Primitives::relationalOperation(Interpreter& interpreter, System& sys, SmallInteger argumentCount,
+                                         std::function<bool(SmallInteger, SmallInteger)> smallIntOperator,
+                                         std::function<bool(Decimal, Decimal)> decimalOperator) {
+        if (argumentCount != 1) {
             return false;
         }
 
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
+        ObjectPointer arg = interpreter.pop();
+        ObjectPointer self = interpreter.pop();
 
-        interpreter.push(self < arg ? sys.valueTrue() : sys.valueFalse());
+        if (arg.isDecimal() || self.isDecimal()) {
+            interpreter.push(decimalOperator(self.decimal(), arg.decimal()) ? sys.valueTrue() : sys.valueFalse());
+        } else {
+            interpreter.push(smallIntOperator(self.smallInt(), arg.smallInt()) ? sys.valueTrue() : sys.valueFalse());
+        }
+
         return true;
+    }
+
+    bool Primitives::numericOperation(Interpreter& interpreter, System& sys, SmallInteger argumentCount,
+                                      std::function<int64_t(int64_t, int64_t)> intOperator,
+                                      std::function<Decimal(Decimal, Decimal)> decimalOperator) {
+        if (argumentCount != 1) {
+            return false;
+        }
+
+        ObjectPointer arg = interpreter.pop();
+        ObjectPointer self = interpreter.pop();
+
+        if (arg.isDecimal() || self.isDecimal()) {
+            interpreter.push(ObjectPointer::forDecimal(decimalOperator(self.decimal(), arg.decimal())));
+        } else {
+            interpreter.push(ObjectPointer::forSmallInt(
+                    SmallIntegers::toSmallInteger(intOperator(self.smallInt(), arg.smallInt()))));
+        }
+
+        return true;
+    }
+
+    bool Primitives::integerOperation(Interpreter& interpreter, System& sys, SmallInteger argumentCount,
+                                      std::function<SmallInteger(SmallInteger, SmallInteger)> op) {
+        if (argumentCount != 1) {
+            return false;
+        }
+
+        ObjectPointer arg = interpreter.pop();
+        ObjectPointer self = interpreter.pop();
+
+        interpreter.push(ObjectPointer::forSmallInt(op(self.smallInt(), arg.smallInt())));
+        return true;
+    }
+
+    bool Primitives::lessThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        return relationalOperation(interpreter, sys, argumentCount, std::less<>(), std::less<>());
     }
 
     bool Primitives::lessThanOrEqual(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-
-        interpreter.push(self <= arg ? sys.valueTrue() : sys.valueFalse());
-        return true;
+        return relationalOperation(interpreter, sys, argumentCount, std::less_equal<>(), std::less_equal<>());
     }
 
     bool Primitives::greaterThan(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-
-        interpreter.push(self > arg ? sys.valueTrue() : sys.valueFalse());
-        return true;
+        return relationalOperation(interpreter, sys, argumentCount, std::greater<>(), std::greater<>());
     }
 
     bool Primitives::greaterThanOrEqual(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-
-        interpreter.push(self >= arg ? sys.valueTrue() : sys.valueFalse());
-        return true;
+        return relationalOperation(interpreter, sys, argumentCount, std::greater_equal<>(), std::greater_equal<>());
     }
 
     bool Primitives::add(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-        //TODO limits
-
-        interpreter.push(ObjectPointer::forSmallInt(self + arg));
-        return true;
+        return numericOperation(interpreter, sys, argumentCount, std::plus<>(), std::plus<>());
     }
 
     bool Primitives::subtract(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-//TODO limits
-        interpreter.push(ObjectPointer::forSmallInt(self - arg));
-        return true;
+        return numericOperation(interpreter, sys, argumentCount, std::minus<>(), std::minus<>());
     }
 
     bool Primitives::multiply(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-//TODO limits
-        interpreter.push(ObjectPointer::forSmallInt(self * arg));
-        return true;
+        return numericOperation(interpreter, sys, argumentCount, std::multiplies<>(), std::multiplies<>());
     }
 
     bool Primitives::divide(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
+        return numericOperation(interpreter, sys, argumentCount,
+                                [](SmallInteger a, SmallInteger b) -> SmallInteger {
+                                    if (b == 0) {
+                                        throw std::runtime_error("division by zero");
+                                    }
 
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-//TODO limits
-        interpreter.push(ObjectPointer::forSmallInt(self / arg));
-        return true;
+                                    return a / b;
+                                },
+                                std::divides<>());
     }
 
     bool Primitives::remainder(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-//TODO limits
-        interpreter.push(ObjectPointer::forSmallInt(self % arg));
-        return true;
+        return numericOperation(interpreter, sys, argumentCount, std::modulus<>(),
+                                [](Decimal a, Decimal b) -> Decimal { return fmod(a, b); });
     }
 
 
     bool Primitives::bitAnd(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-        interpreter.push(ObjectPointer::forSmallInt(self & arg));
-        return true;
+        return integerOperation(interpreter, sys, argumentCount, std::bit_and<>());
     }
 
     bool Primitives::bitOr(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-        interpreter.push(ObjectPointer::forSmallInt(self | arg));
-        return true;
+        return integerOperation(interpreter, sys, argumentCount, std::bit_or<>());
     }
 
     bool Primitives::bitInvert(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 0 || !interpreter.stackTop().isSmallInt()) {
+        if (argumentCount != 0) {
             return false;
         }
 
@@ -171,28 +135,14 @@ namespace pimii {
     }
 
     bool Primitives::shiftLeft(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-        interpreter.push(ObjectPointer::forSmallInt(self << arg));
-        return true;
+        return integerOperation(interpreter, sys, argumentCount,
+                                [](SmallInteger bits, SmallInteger value) -> SmallInteger { return value << bits; });
     }
 
     bool Primitives::shiftRight(pimii::Interpreter& interpreter, pimii::System& sys,
                                 pimii::SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt() ||
-            !interpreter.stackValue(1).isSmallInt()) {
-            return false;
-        }
-
-        SmallInteger arg = interpreter.pop().smallInt();
-        SmallInteger self = interpreter.pop().smallInt();
-        interpreter.push(ObjectPointer::forSmallInt(self >> arg));
-        return true;
+        return integerOperation(interpreter, sys, argumentCount,
+                                [](SmallInteger bits, SmallInteger value) -> SmallInteger { return value >> bits; });
     }
 
     bool Primitives::basicNew(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
@@ -211,7 +161,7 @@ namespace pimii {
     }
 
     bool Primitives::basicNewWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt()) {
+        if (argumentCount != 1) {
             return false;
         }
 
@@ -228,7 +178,7 @@ namespace pimii {
 
 
     bool Primitives::basicAllocWith(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt()) {
+        if (argumentCount != 1) {
             return false;
         }
 
@@ -244,7 +194,7 @@ namespace pimii {
     }
 
     bool Primitives::byteAt(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 1 || !interpreter.stackTop().isSmallInt()) {
+        if (argumentCount != 1) {
             return false;
         }
 
@@ -256,14 +206,14 @@ namespace pimii {
     }
 
     bool Primitives::byteAtPut(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 2 || !interpreter.stackTop().isSmallInt() || !interpreter.stackValue(1).isSmallInt()) {
+        if (argumentCount != 2) {
             return false;
         }
 
         SmallInteger byte = interpreter.pop().smallInt();
         SmallInteger index = interpreter.pop().smallInt() - 1;
         if (byte < 0 || byte > 255) {
-            throw std::range_error("byte value out of range!");
+            throw std::runtime_error("byteAtPut: byte value out of range!");
         }
         ObjectPointer value = interpreter.stackTop();
         value.storeByte(index, (char) byte);
@@ -447,7 +397,6 @@ namespace pimii {
         SmallInteger destIndex = interpreter.pop().smallInt() - 1;
         SmallInteger index = interpreter.pop().smallInt() - 1;
         ObjectPointer dest = interpreter.pop();
-        //TODO ensure value range
         ObjectPointer self = interpreter.stackTop();
         self.transferFieldsTo(self.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + index, dest,
                               dest.type()[System::TYPE_FIELD_NUMBER_OF_FIXED_FIELDS].smallInt() + destIndex, length);
@@ -489,7 +438,6 @@ namespace pimii {
         SmallInteger destIndex = interpreter.pop().smallInt() - 1;
         SmallInteger index = interpreter.pop().smallInt() - 1;
         ObjectPointer dest = interpreter.pop();
-        //TODO ensure value range
         ObjectPointer self = interpreter.stackTop();
         self.transferFieldsTo(index, dest, destIndex, length);
 
@@ -506,13 +454,11 @@ namespace pimii {
         // This primitive can only handle BlockContexts
         if (!blockContext.isObject() ||
             blockContext.type() != sys.typeBlockContext()) {
-            interpreter.unPop(2);
             return false;
         }
 
         SmallInteger blockArgumentCount = blockContext[System::CONTEXT_BLOCK_ARGUMENT_COUNT_FIELD].smallInt();
         if (blockArgumentCount != 0) {
-            interpreter.unPop(2);
             return false;
         }
 
@@ -589,117 +535,41 @@ namespace pimii {
             return false;
         }
 
-        ObjectPointer event = sys.popInputEvent();
+        ObjectPointer event = interpreter.nextQueuedInput();
         interpreter.pop();
         interpreter.push(event);
         return true;
     }
 
-    bool Primitives::terminalSize(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 0) {
-            return false;
-        }
-
-        ObjectPointer point = sys.memoryManager().makeObject(2, sys.typePoint());
-        SmallInteger x;
-        SmallInteger y;
-        getmaxyx(stdscr, y, x);
-
-        point[0] = x - 1;
-        point[1] = y - 1;
-        interpreter.pop();
-        interpreter.push(point);
-
-        return true;
-    }
-
     bool Primitives::terminalShowString(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 3) {
+        if (argumentCount != 1) {
             return false;
         }
 
         ObjectPointer string = interpreter.pop();
-        SmallInteger colorIndex = interpreter.pop().smallInt();
-        ObjectPointer point = interpreter.pop();
 
-        if (!sys.is(point, sys.typePoint()) || !sys.is(string, sys.typeString())) {
-            interpreter.unPop(3);
+        if (!sys.is(string, sys.typeString())) {
             return false;
         }
 
-        //std::cout <<  string.stringView() << std::endl;
-        init_pair(1, COLOR_WHITE, COLOR_RED);
-        bool bold = colorIndex > 16;
-        if (bold) {
-            colorIndex = colorIndex - 16;
-            attron(A_BOLD);
-        }
-        attron(COLOR_PAIR(colorIndex));
-        mvaddstr(point[1].smallInt() - 1, point[0].smallInt() - 1, string.stringView().data());
-        attroff(COLOR_PAIR(colorIndex));
-        if (bold) {
-            attroff(A_BOLD);
-        }
-
+        std::cout << string.stringView();
+        std::cout.flush();
         return true;
     }
 
-    bool Primitives::terminalShowBox(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 2) {
+    bool Primitives::readCounter(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
+        if (argumentCount != 1) {
             return false;
         }
 
-        SmallInteger colorIndex = interpreter.pop().smallInt();
-        ObjectPointer rect = interpreter.pop();
+        SmallInteger index = interpreter.pop().smallInt();
+        interpreter.pop();
 
-        SmallInteger x = rect[0][0].smallInt() - 1;
-        SmallInteger y = rect[0][1].smallInt() - 1;
-        SmallInteger width = rect[1][0].smallInt();
-        SmallInteger height = rect[1][1].smallInt();
-
-        init_pair(1, COLOR_WHITE, COLOR_RED);
-        bool bold = colorIndex > 16;
-        if (bold) {
-            colorIndex = colorIndex - 16;
-            attron(A_BOLD);
-        }
-        attron(COLOR_PAIR(colorIndex));
-        mvaddch(y, x, ACS_ULCORNER);
-        mvaddch(y, x + width, ACS_URCORNER);
-        for (SmallInteger cx = x + 1; cx < x + width; cx++) {
-            mvaddch(y, cx, ACS_HLINE);
-        }
-        for (SmallInteger cy = y + 1; cy < y + height; cy++) {
-            mvaddch(cy, x, ACS_VLINE);
-            mvaddch(cy, x + width, ACS_VLINE);
-        }
-        mvaddch(y + height, x, ACS_LLCORNER);
-        mvaddch(y + height, x + width, ACS_LRCORNER);
-        for (SmallInteger cx = x + 1; cx < x + width; cx++) {
-            mvaddch(y + height, cx, ACS_HLINE);
-        }
-        attroff(COLOR_PAIR(colorIndex));
-        if (bold) {
-            attroff(A_BOLD);
+        switch (index) {
+            default:
+                interpreter.push(ObjectPointer::forSmallInt(0));
         }
 
-        return true;
-    }
-
-    bool Primitives::terminalShowCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        return false;
-    }
-
-    bool Primitives::terminalHideCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        return false;
-    }
-
-    bool Primitives::terminalDraw(Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
-        if (argumentCount != 0) {
-            return false;
-        }
-
-        refresh();
         return true;
     }
 

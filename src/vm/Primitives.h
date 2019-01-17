@@ -96,19 +96,11 @@ namespace pimii {
 
         static bool terminalNextEvent(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool terminalSize(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
-
         static bool terminalShowString(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool terminalShowBox(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
+        static bool readCounter(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
 
-        static bool terminalShowCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
-
-        static bool terminalHideCursor(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
-
-        static bool terminalDraw(Interpreter& interpreter, System& sys, SmallInteger argumentCount);
-
-        static constexpr std::array<Primitive, 53> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
+        static constexpr std::array<Primitive, 49> methods = {equality, lessThan, lessThanOrEqual, greaterThan,
                                                               greaterThanOrEqual, add, subtract, multiply, divide,
                                                               remainder, bitAnd, bitOr, bitInvert, shiftLeft,
                                                               shiftRight, basicNew, basicNewWith, basicAllocWith,
@@ -117,11 +109,21 @@ namespace pimii {
                                                               perform, perform, perform, performWith, objectAt,
                                                               objectAtPut, objectTransfer, id, size, objectSize, fork,
                                                               wait, signal, at, atPut, transfer, terminalNextEvent,
-                                                              terminalSize, terminalShowString, terminalShowBox,
-                                                              terminalShowCursor, terminalHideCursor, terminalDraw};
+                                                              terminalShowString, readCounter};
 
 
     public:
+        static bool relationalOperation(Interpreter& interpreter, System& sys, SmallInteger argumentCount,
+                                        std::function<bool(SmallInteger, SmallInteger)> smallIntOperator,
+                                        std::function<bool(Decimal, Decimal)> decimalOperator);
+
+        static bool numericOperation(Interpreter& interpreter, System& sys, SmallInteger argumentCount,
+                                     std::function<int64_t(int64_t, int64_t)> intOperator,
+                                     std::function<Decimal(Decimal, Decimal)> decimalOperator);
+
+        static bool integerOperation(Interpreter& interpreter, System& sys, SmallInteger argumentCount,
+                                     std::function<SmallInteger(SmallInteger, SmallInteger)> op);
+
         static inline bool
         executePrimitive(SmallInteger index, Interpreter& interpreter, System& sys, SmallInteger argumentCount) {
             return methods[index](interpreter, sys, argumentCount);

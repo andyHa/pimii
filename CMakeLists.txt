@@ -3,6 +3,8 @@ project(pimii)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_definitions(DEBUG)
+
 #set(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 

@@ -2,7 +2,6 @@
 #include <fstream>
 #include <thread>
 #include <stdlib.h>
-#include <ncurses.h>
 
 #include "src/vm/Interpreter.h"
 #include "src/vm/Primitives.h"
@@ -40,7 +39,7 @@ int main() {
 //            "[ [ true ] whileTrue: [ InputSemaphore wait. [ Terminal nextEvent] whileNotNil: [ :event | Terminal at: 0 @ 0 color: 0 put: event key asString. Terminal draw. ]. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
             //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
             //   "Terminal at: 0 @ 0 color: 0 put: ((Rectangle origin: 16@1 dimensions: 10@10) intersects: (Rectangle origin: 5@5 dimensions: 10@10) ) asString.",
-            "Terminal box: (Rectangle origin: 1 @ 1 dimensions: (Terminal size)) color: 1. Terminal draw.",
+            "Terminal println: 'Hello World'. [ true ] whileTrue: [ InputSemaphore wait. [Terminal nextEvent] whileNotNil: [ :event | Terminal println: event. ] ].",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, sys.typeArray());
@@ -56,11 +55,6 @@ int main() {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     //interpreter.newActiveContext(context);
 
-    initscr();
-    cbreak();
-    noecho();
-    timeout(0);
-    start_color();
 
     // Enables keypad mode. This makes (at least for me) mouse events getting
     // reported as KEY_MOUSE, instead as of random letters.
@@ -85,17 +79,17 @@ int main() {
 //        }
 //    }).detach();
 
-    /*  std::thread([&sys]() {
+      std::thread([&interpreter]() {
           while (true) {
-              int c = wgetch(stdscr);
-              sys.recordInputEvent(pimii::InputEvent::keyPressed(c));
+              std::string input;
+              getline (std::cin, input);
+              interpreter.queueInput(input);
           }
       }).detach();
-  */
+
     try {
         interpreter.run(context);
     } catch (const std::exception& e) {
-        endwin();
         std::cout << e.what() << std::endl;
         pimii::ObjectPointer ctx = interpreter.currentActiveContext();
         ctx[pimii::System::CONTEXT_IP_FIELD] = pimii::ObjectPointer::forSmallInt(interpreter.currentIP());

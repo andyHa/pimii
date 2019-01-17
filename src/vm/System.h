@@ -14,40 +14,6 @@
 
 namespace pimii {
 
-    enum InputEventType : SmallInteger {
-        KEY = 1, MOUSE_MOVE, MOUSE_DOWN = 2, MOUSE_UP = 3
-    };
-
-    struct InputEvent {
-        SmallInteger type;
-        SmallInteger key;
-        SmallInteger button;
-        SmallInteger col;
-        SmallInteger row;
-
-        InputEvent(SmallInteger type, SmallInteger key, SmallInteger button, SmallInteger col, SmallInteger row) : type(
-                type), key(key), button(button), col(col), row(row) {}
-
-        static InputEvent keyPressed(SmallInteger key) {
-            return {KEY, key, 0, 0, 0};
-        }
-
-    };
-
-    enum OutputEventType : SmallInteger {
-        SHOW_STRING, SHOW_BOX, MOVE_CURSOR, SHOW_CURSOR, HIDE_CURSOR, DRAW
-    };
-
-    struct OutputEvent {
-        SmallInteger type;
-        SmallInteger col;
-        SmallInteger row;
-        SmallInteger width;
-        SmallInteger height;
-        SmallInteger colorIndex;
-        std::string string;
-    };
-
     class System {
         MemoryManager mm;
         SymbolTable symbols;
@@ -77,13 +43,6 @@ namespace pimii {
         ObjectPointer proc;
 
         ObjectPointer specialSelectorArray;
-
-        bool notifyTimerSemaphore;
-        bool notifyInputSemaphore;
-        std::mutex inputEventsMutex;
-        std::condition_variable interruptReceived;
-        std::deque<InputEvent> inputEvents;
-        std::deque<OutputEvent> outputEvents;
 
         void
         completeType(ObjectPointer type, ObjectPointer superType, const std::string& name,
@@ -202,13 +161,8 @@ namespace pimii {
         static constexpr SmallInteger PRIMITIVE_AT_PUT = PRIMITIVE_AT + 1;
         static constexpr SmallInteger PRIMITIVE_TRANSFER = PRIMITIVE_AT_PUT + 1;
         static constexpr SmallInteger PRIMITIVE_TERMINAL_NEXT_EVENT = PRIMITIVE_TRANSFER + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_SIZE = PRIMITIVE_TERMINAL_NEXT_EVENT + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_STRING = PRIMITIVE_TERMINAL_SIZE + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_BOX = PRIMITIVE_TERMINAL_SHOW_STRING + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_CURSOR = PRIMITIVE_TERMINAL_SHOW_BOX + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_HIDE_CURSOR = PRIMITIVE_TERMINAL_SHOW_CURSOR + 1;
-        static constexpr SmallInteger PRIMITIVE_TERMINAL_DRAW = PRIMITIVE_TERMINAL_HIDE_CURSOR + 1;
-
+        static constexpr SmallInteger PRIMITIVE_TERMINAL_SHOW_STRING = PRIMITIVE_TERMINAL_NEXT_EVENT + 1;
+        static constexpr SmallInteger PRIMITIVE_READ_METRIC = PRIMITIVE_TERMINAL_SHOW_STRING + 1;
 
         System();
 
@@ -316,63 +270,6 @@ namespace pimii {
 
         bool is(ObjectPointer instance, ObjectPointer type);
 
-        void fireTimer() {
-            if (!notifyTimerSemaphore) {
-                notifyTimerSemaphore = true;
-                interruptReceived.notify_one();
-            }
-        }
-
-        void recordInputEvent(InputEvent event) {
-            /*   std::lock_guard<std::mutex> lock(inputEventsMutex);
-
-               inputEvents.push_back(event);
-               if (!notifyInputSemaphore) {
-                   notifyInputSemaphore = true;
-                   interruptReceived.notify_one();
-               }
-               */
-        }
-
-        ObjectPointer popInputEvent() {
-            std::lock_guard<std::mutex> lock(inputEventsMutex);
-            if (inputEvents.empty()) {
-                return Nil::NIL;
-            }
-
-            InputEvent sourceEvent = inputEvents.front();
-            inputEvents.pop_front();
-
-            ObjectPointer result = mm.makeObject(5, inputEventType);
-            result[0] = sourceEvent.type;
-            result[1] = sourceEvent.key;
-            result[2] = sourceEvent.button;
-            result[3] = sourceEvent.col;
-            result[4] = sourceEvent.row;
-
-            return result;
-        }
-
-        bool shouldNotifySemaphore() {
-            return notifyTimerSemaphore || notifyInputSemaphore;
-        }
-
-        bool shouldNotifyTimerSemaphore() {
-            return notifyTimerSemaphore;
-        }
-
-        bool shouldNotifyInputSemaphore() {
-            return notifyInputSemaphore;
-        }
-
-        void clearNotifications() {
-            notifyTimerSemaphore = false;
-            notifyInputSemaphore = false;
-        }
-
-        std::condition_variable& didReceiveInterrupt() {
-            return interruptReceived;
-        }
     };
 
 }

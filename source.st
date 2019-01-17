@@ -270,7 +270,6 @@ limitTo: size
 
     ^self from: 1 to: size.
 ------------------------
-
 < other
     ^(self compareBytesTo: other) = -1.
 ------------------------
@@ -513,26 +512,15 @@ Class Methods: Terminal
 nextEvent
     <Primitive:46>
 ------------------------
-size
+print: aString
     <Primitive:47>
 ------------------------
-at: aPoint color: aColorIndex put: aString
-    <Primitive:48>
+cr
+    self print: $10 asString.
 ------------------------
-box: aRectangle color: aColorIndex
-    <Primitive:49>
-------------------------
-at: aPoint color: aColorIndex put: aString leftAligned: length
-    self at: aPoint color: aColorIndex put: ((aString leftPadWith: $32 to: length) limitTo: length).
-------------------------
-showCursor
-    <Primitive:50>
-------------------------
-hideCursor
-    <Primitive:51>
-------------------------
-draw
-    <Primitive:52>
+println: aString
+    self print: aString.
+    self cr.
 ------------------------
 
 Class: InputEvent

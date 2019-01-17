@@ -20,7 +20,7 @@ namespace pimii {
             return std::numeric_limits<int32_t>::max();
         }
 
-        static SmallInteger toSmallInteger(size_t value) {
+        static SmallInteger toSmallInteger(int64_t value) {
             if (value > maxSmallInt()) {
                 throw std::range_error("No valid small integer!");
             }

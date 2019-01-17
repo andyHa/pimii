@@ -24,7 +24,6 @@ namespace pimii {
 
     void Interpreter::run(ObjectPointer rootContext) {
         lastTimer = std::chrono::steady_clock::now();
-        //std::chrono::steady_clock::time_point lastTimer = std::chrono::steady_clock::now();
         rootProcess = system.memoryManager().makeObject(System::PROCESS_SIZE, system.typeProcess());
         rootProcess[System::PROCESS_FIELD_CONTEXT] = rootContext;
         rootProcess[System::PROCESS_FIELD_TIME] = 0;
@@ -61,18 +60,19 @@ namespace pimii {
     }
 
     void Interpreter::notifySemaphores() {
-        std::chrono::milliseconds delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - lastTimer);
+        std::chrono::milliseconds delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - lastTimer);
 
         if (delta.count() > 200) {
             ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_TIMER_SEMAPHORE];
             signalSemaphore(semaphore);
             lastTimer = std::chrono::steady_clock::now();
         } else {
-            int c = getch();
-            if (c != ERR) {
+            if (inputAvailable) {
+                std::lock_guard lock(inputQueueMutex);
+                inputAvailable = false;
                 ObjectPointer semaphore = system.processor()[System::PROCESSOR_FIELD_INPUT_SEMAPHORE];
                 signalSemaphore(semaphore);
-                // TODO add event to queue
             }
         }
 
@@ -98,7 +98,7 @@ namespace pimii {
 
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-                notifySemaphores();
+            notifySemaphores();
             nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                                    System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
         }
@@ -362,7 +362,21 @@ namespace pimii {
     }
 
     bool Interpreter::executePrimitive(SmallInteger index, SmallInteger numberOfArguments) {
-        return Primitives::executePrimitive(index, *this, system, numberOfArguments);
+        SmallInteger backupSP = sp;
+        try {
+            bool result = Primitives::executePrimitive(index, *this, system, numberOfArguments);
+            if (result) {
+                return true;
+            }
+        } catch (std::exception& e) {
+#ifdef DEBUG
+            std::cout << "Primitive: " << index << " failed: " << e.what() << std::endl;
+#endif
+        }
+
+        // Restore original stack pointer...
+        sp = backupSP;
+        return false;
     }
 
     bool Interpreter::isBlockContext(ObjectPointer context) {
@@ -560,6 +574,24 @@ namespace pimii {
                 throw std::runtime_error("Invalid push instruction");
         }
 
+    }
+
+    void Interpreter::queueInput(std::string input) {
+        std::lock_guard lock(inputQueueMutex);
+        queuedInputs.emplace_back(input);
+        inputAvailable = true;
+    }
+
+    ObjectPointer Interpreter::nextQueuedInput() {
+        std::lock_guard lock(inputQueueMutex);
+        if (queuedInputs.empty()) {
+            return Nil::NIL;
+        }
+
+        std::string result = queuedInputs.front();
+        queuedInputs.pop_front();
+
+        return system.memoryManager().makeString(result, system.typeString());
     }
 
 
