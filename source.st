@@ -483,7 +483,7 @@ fork: name
 ------------------------
 whileNotNil: aBlock
     | obj |
-    [ obj := self value. obj notNil ] whileTrue: [ aBlock value: obj ].
+    [ obj := self value. obj notNil. ] whileTrue: [ aBlock value: obj ].
 ------------------------
 
 Class: ProcessScheduler
@@ -512,14 +512,17 @@ Class Methods: Terminal
 nextEvent
     <Primitive:46>
 ------------------------
-print: aString
+output: aString
     <Primitive:47>
+------------------------
+print: anObject
+    self output: anObject asString
 ------------------------
 cr
     self print: $10 asString.
 ------------------------
-println: aString
-    self print: aString.
+println: anObject
+    self print: anObject.
     self cr.
 ------------------------
 

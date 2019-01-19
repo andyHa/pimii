@@ -140,6 +140,6 @@ namespace pimii {
     }
 
     void MemoryManager::idleGC() {
-        gc();
+       // gc();
     }
 }

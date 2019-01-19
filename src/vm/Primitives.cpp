@@ -3,7 +3,6 @@
 //
 
 #include <iostream>
-#include <ncurses.h>
 #include <cmath>
 #include "Primitives.h"
 

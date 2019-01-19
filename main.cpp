@@ -10,6 +10,14 @@
 #include "src/compiler/Compiler.h"
 #include "src/compiler/SourceFileParser.h"
 
+/*
+ * Simplify MM and GC
+ * Load and store image
+ * Primitives: list files / load file / store file / exit VM
+ * Cleanup context switch
+ * Built-in compiler
+ * Built-in REPL / Commands
+ */
 
 int main() {
 
@@ -39,7 +47,7 @@ int main() {
 //            "[ [ true ] whileTrue: [ InputSemaphore wait. [ Terminal nextEvent] whileNotNil: [ :event | Terminal at: 0 @ 0 color: 0 put: event key asString. Terminal draw. ]. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
             //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
             //   "Terminal at: 0 @ 0 color: 0 put: ((Rectangle origin: 16@1 dimensions: 10@10) intersects: (Rectangle origin: 5@5 dimensions: 10@10) ) asString.",
-            "Terminal println: 'Hello World'. [ true ] whileTrue: [ InputSemaphore wait. [Terminal nextEvent] whileNotNil: [ :event | Terminal println: event. ] ].",
+            "Terminal println: 'Hello World'. [ true ] whileTrue: [ Terminal print: 'REPL> '. InputSemaphore wait. [Terminal nextEvent] whileNotNil: [ :event | Terminal println: event. ] ].",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, sys.typeArray());

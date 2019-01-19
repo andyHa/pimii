@@ -7,8 +7,6 @@
 #include <sstream>
 #include <thread>
 
-#include <ncurses.h>
-
 #include "Interpreter.h"
 #include "Primitives.h"
 #include "../common/Looping.h"
@@ -75,7 +73,6 @@ namespace pimii {
                 signalSemaphore(semaphore);
             }
         }
-
     }
 
     void Interpreter::handleContextSwitch() {
@@ -83,10 +80,17 @@ namespace pimii {
                 std::chrono::steady_clock::now() - lastContextSwitch).count();
 
         ObjectPointer activeProcess = system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS];
+        if (activeProcess != Nil::NIL) {
+            activeProcess[System::PROCESS_FIELD_TIME] =
+                    activeProcess[System::PROCESS_FIELD_TIME].smallInt() + elapsedTime;
+            activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
+        }
+        system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS] = Nil::NIL;
 
         ObjectPointer nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                                              System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
         while (nextProcess == Nil::NIL) {
+            /*
             if (activeContext != Nil::NIL && system.memoryManager().shouldIdleGC()) {
                 storeContextRegisters();
                 activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
@@ -95,8 +99,9 @@ namespace pimii {
                 activeContext = activeProcess[System::PROCESS_FIELD_CONTEXT];
                 fetchContextRegisters();
             }
+             */
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             notifySemaphores();
             nextProcess = popFront(system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
@@ -106,11 +111,7 @@ namespace pimii {
         contextSwitchExpected = false;
         lastContextSwitch = std::chrono::steady_clock::now();
 
-        if (activeProcess != Nil::NIL) {
-            activeProcess[System::PROCESS_FIELD_TIME] =
-                    activeProcess[System::PROCESS_FIELD_TIME].smallInt() + elapsedTime;
-            activeProcess[System::PROCESS_FIELD_CONTEXT] = activeContext;
-        }
+
         system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS] = nextProcess;
 
         newActiveContext(nextProcess[System::PROCESS_FIELD_CONTEXT]);
@@ -443,9 +444,11 @@ namespace pimii {
 
         pushFront(firstWaitingProcess, system.processor(), System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
                   System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
-        pushBack(system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS], system.processor(),
-                 System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
-                 System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        if (system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS] != Nil::NIL) {
+            pushBack(system.processor()[System::PROCESSOR_FIELD_ACTIVE_PROCESS], system.processor(),
+                     System::PROCESSOR_FIELD_FIRST_WAITING_PROCESS,
+                     System::PROCESSOR_FIELD_LAST_WAITING_PROCESS);
+        }
         contextSwitchExpected = true;
     }
 

@@ -8,9 +8,6 @@ add_compile_definitions(DEBUG)
 #set(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_CXX_FLAGS "-Wall -fno-rtti")
 
-find_package(Curses REQUIRED)
-include_directories(${CURSES_INCLUDE_DIR})
-
 add_executable(pimii main.cpp
         src/vm/SystemDictionary.cpp
         src/vm/Interpreter.cpp
