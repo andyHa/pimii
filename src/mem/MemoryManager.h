@@ -17,6 +17,13 @@
 namespace pimii {
 
     class MemoryManager {
+        static Word* basePointer;
+        static Word rootAllocationIndex;
+        static Word rootEndIndex;
+        static Word allocationIndex;
+        static Word endIndex;
+        static Word size;
+        /*
         SmallInteger maxSegmentsPerPool;
         SmallInteger buffersLowWaterMark;
         SmallInteger buffersHighWaterMark;
@@ -45,106 +52,42 @@ namespace pimii {
         void translateObject(ObjectPointer obj, std::deque<ObjectPointer>& gcWork);
 
         ObjectPointer translateField(ObjectPointer field, std::deque<ObjectPointer>& gcWork);
-
+*/
     public:
-        MemoryManager(Word maxSegmentsPerPool) : maxSegmentsPerPool(maxSegmentsPerPool),
-                                                 rootAllocator(std::make_unique<Allocator>(maxSegmentsPerPool)),
-                                                 activeObjects(std::make_unique<Allocator>(maxSegmentsPerPool)),
-                                                 buffers(std::make_unique<Allocator>(maxSegmentsPerPool)) {
-            objectsHighWaterMark = maxSegmentsPerPool - 2;
-            buffersHighWaterMark = objectsHighWaterMark;
-        };
 
+        static void initialize(std::string imageFileName);
 
-        bool shouldIdleGC();
+   //     bool shouldIdleGC();
 
-        void idleGC();
+    //    void idleGC();
 
         bool shouldRunRecommendedGC() {
-            return activeObjects->numberOfSegments() >= objectsHighWaterMark ||
-                   buffers->numberOfSegments() >= buffersHighWaterMark;
+            return false;
         }
 
         void runRecommendedGC() {
-            gc();
         }
 
         ObjectPointer makeRootObject(SmallInteger numberOfFields, ObjectPointer type);
 
         inline ObjectPointer makeObject(SmallInteger numberOfFields, ObjectPointer type) {
             if (numberOfFields < 0) {
-                throw std::range_error("Cannot allocate negative memory.");
+                throw std::runtime_error("Cannot allocate negative memory.");
             }
 
-            auto* buffer = activeObjects->alloc(numberOfFields + 2);
-            if (buffer == nullptr) {
-                std::cout << activeObjects->numberOfSegments() << " /" << activeObjects->objectCount() << std::endl;
-                throw std::runtime_error("Overflow of heap space: objects");
+            if (allocationIndex + numberOfFields + 2 < endIndex) {
+                Word result = allocationIndex;
+                allocationIndex += numberOfFields + 2;
+                return {result, type, numberOfFields};
+            } else {
+                throw std::runtime_error("Running out of memory!");
             }
-
-            return {buffer, type, numberOfFields};
         }
 
         ObjectPointer makeBuffer(SmallInteger numberOfBytes, ObjectPointer type);
 
         ObjectPointer makeString(std::string_view string, ObjectPointer type);
 
-        SmallInteger allocatedObjects() {
-            return activeObjects->objectCount();
-        }
-
-        SmallInteger allocatedRoots() {
-            return rootAllocator->objectCount();
-        }
-
-        SmallInteger allocatedBuffers() {
-            return buffers->objectCount();
-        }
-
-        SmallInteger totalObjects() {
-            return activeObjects->objectCount() + rootAllocator->objectCount() + buffers->objectCount();
-        }
-
-        SmallInteger allocatedObjectWords() {
-            return activeObjects->usedWords();
-        }
-
-        SmallInteger allocatedRootWords() {
-            return rootAllocator->usedWords();
-        }
-
-        SmallInteger allocatedBufferWords() {
-            return buffers->usedWords();
-        }
-
-        SmallInteger lowWatermarkForBuffers() {
-            return buffersLowWaterMark;
-        }
-
-        SmallInteger highWatermarkForBuffers() {
-            return buffersHighWaterMark;
-        }
-
-        SmallInteger lowWatermarkForObjects() {
-            return objectsLowWaterMark;
-        }
-
-        SmallInteger highWatermarkForObjects() {
-            return buffersHighWaterMark;
-        }
-
-        SmallInteger gcMicros() {
-            return gcDurationMicros;
-        }
-
-        SmallInteger gcCount() {
-            return gcCounter;
-        }
-
-        void resetGCCounter() {
-            gcDurationMicros = 0;
-            gcCounter = 0;
-        }
     };
 
 }

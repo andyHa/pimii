@@ -518,7 +518,7 @@ namespace pimii {
         instuctionsExecuted = 0;
         activeMicros = 0;
         lastMetrics = std::chrono::steady_clock::now();
-        system.memoryManager().resetGCCounter();
+//        system.memoryManager().resetGCCounter();
 
     }
 

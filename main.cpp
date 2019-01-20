@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "src/vm/Interpreter.h"
+#include "src/mem/MemoryManager.h"
 #include "src/vm/Primitives.h"
 #include "src/compiler/Methods.h"
 #include "src/compiler/Tokenizer.h"
@@ -20,7 +21,7 @@
  */
 
 int main() {
-
+    pimii::MemoryManager::initialize("");
 
     std::cout << pimii::SmallIntegers::minSmallInt() << std::endl;
     std::cout << pimii::SmallIntegers::maxSmallInt() << std::endl;
@@ -47,7 +48,8 @@ int main() {
 //            "[ [ true ] whileTrue: [ InputSemaphore wait. [ Terminal nextEvent] whileNotNil: [ :event | Terminal at: 0 @ 0 color: 0 put: event key asString. Terminal draw. ]. ] ] fork. [ true ] whileTrue: [ TimerSemaphore wait. ].",
             //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
             //   "Terminal at: 0 @ 0 color: 0 put: ((Rectangle origin: 16@1 dimensions: 10@10) intersects: (Rectangle origin: 5@5 dimensions: 10@10) ) asString.",
-            "Terminal println: 'Hello World'. [ true ] whileTrue: [ Terminal print: 'REPL> '. InputSemaphore wait. [Terminal nextEvent] whileNotNil: [ :event | Terminal println: event. ] ].",
+        //    "Terminal println: 'Hello World'. [ true ] whileTrue: [ Terminal print: 'REPL> '. InputSemaphore wait. [Terminal nextEvent] whileNotNil: [ :event | Terminal println: event. ] ].",
+            "Terminal println: ((Tokenizer new) reader: (Reader new string: '   3 + 4')) read.",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, sys.typeArray());

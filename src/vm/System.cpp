@@ -10,7 +10,7 @@
 namespace pimii {
 
     System::System()
-            : mm(32), symbols(mm), dictionary(mm),
+            : mm(), symbols(mm), dictionary(mm),
               nilType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               metaClassType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),
               classType(mm.makeRootObject(TYPE_SIZE, Nil::NIL)),

@@ -21,6 +21,9 @@ namespace pimii {
         for (Looping loop = Looping(table.size(), hash); loop.hasNext(); loop.next()) {
             if (table[loop()] == Nil::NIL) {
                 table[loop()] = mm.makeString(name, symbolType);
+                if ( table[loop()].id() == 324) {
+                    std::cout << "X";
+                }
                 SmallInteger newSize = symbolTable[FIELD_TALLY].smallInt() + 1;
                 symbolTable[FIELD_TALLY] = newSize;
                 if (newSize > table.size() * 0.75) {

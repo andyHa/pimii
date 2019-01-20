@@ -6,8 +6,10 @@
 #define MEM_OBJECTPOINTER_H
 
 #include <string>
+#include <iostream>
 
 #include "types.h"
+
 
 namespace pimii {
 
@@ -56,16 +58,17 @@ namespace pimii {
 
         Word data;
 
+
         inline ObjectPointerType getObjectPointerType() const noexcept {
             return (ObjectPointerType) (data & TYPE_MASK);
         }
 
-        inline Object* unmask() const {
+        inline Object* pointer() const {
             if (getObjectPointerType() != BUFFER && getObjectPointerType() != OBJECT) {
                 throw std::bad_cast();
             }
 
-            return (Object*) (data & ~TYPE_MASK);
+            return reinterpret_cast<Object*> (baseAddress + (data & ~TYPE_MASK));
         }
 
         inline Object* object() const {
@@ -73,7 +76,7 @@ namespace pimii {
                 throw std::bad_cast();
             }
 
-            return unmask();
+            return pointer();
         }
 
         inline Object* buffer() const {
@@ -81,15 +84,19 @@ namespace pimii {
                 throw std::bad_cast();
             }
 
-            return unmask();
+            return pointer();
         }
 
         SmallInteger highNibble() const {
-            return unmask()->size >> (usableSizeBytes() * 8);
+            return pointer()->size >> (usableSizeBytes() * 8);
         }
 
         explicit ObjectPointer(Word data) noexcept : data(data) {};
     public:
+
+        //TODO make friend of MemoryManager
+        static Word* baseAddress;
+
         ObjectPointer() noexcept : data(0) {}
 
         ObjectPointer(const ObjectPointer& other) noexcept = default;
@@ -106,25 +113,25 @@ namespace pimii {
             return ObjectPointer(((Word) (floatValue) << 2) | ObjectPointerType::DECIMAL);
         }
 
-        ObjectPointer(const void* object, ObjectPointer type, SmallInteger numberOfFields) noexcept : data(
-                ((Word) object) | OBJECT) {
-            unmask()->size = static_cast<Word>(numberOfFields);
-            unmask()->type = reinterpret_cast<Word&>(type);
+        ObjectPointer(Word objectIndex, ObjectPointer type, SmallInteger numberOfFields) noexcept : data(
+                (objectIndex << 2) | OBJECT) {
+            pointer()->size = static_cast<Word>(numberOfFields);
+            assert(size() == numberOfFields);
+            pointer()->type = reinterpret_cast<Word&>(type);
         };
 
-        ObjectPointer(const void* object, ObjectPointer type, SmallInteger wordSize, SmallInteger odd) noexcept : data(
-                ((Word) object) | BUFFER) {
-
-            unmask()->size = (Word) wordSize | (Word) ((odd & ODD_MASK) << (usableSizeBytes() * 8));
-            unmask()->type = *reinterpret_cast<Word*>(&type);
+        ObjectPointer(Word objectIndex, ObjectPointer type, SmallInteger wordSize, SmallInteger odd) noexcept : data(
+                (objectIndex << 2) | BUFFER) {
+            pointer()->size = (Word) wordSize | (Word) ((odd & ODD_MASK) << (usableSizeBytes() * 8));
+            pointer()->type = reinterpret_cast<Word&>(type);
         };
 
         ObjectPointer type() const {
-            return *reinterpret_cast<ObjectPointer*>(&unmask()->type);
+            return *reinterpret_cast<ObjectPointer*>(&pointer()->type);
         }
 
         void type(ObjectPointer newType) {
-            unmask()->type = *reinterpret_cast<Word*>(&newType);
+            pointer()->type = *reinterpret_cast<Word*>(&newType);
         }
 
         ObjectPointer gcSuccessor() const {
@@ -136,12 +143,12 @@ namespace pimii {
         }
 
         char gcInfo() const {
-            return (char) ((unmask()->size >> (usableSizeBytes() * 8)) & GC_MASK) >> 4;
+            return (char) ((pointer()->size >> (usableSizeBytes() * 8)) & GC_MASK) >> 4;
         }
 
         void gcInfo(char info) {
-            unmask()->size &= clearGCMask();
-            unmask()->size |= (static_cast<Word> ((info << 4) & GC_MASK)) << (usableSizeBytes() * 8);
+            pointer()->size &= clearGCMask();
+            pointer()->size |= (static_cast<Word> ((info << 4) & GC_MASK)) << (usableSizeBytes() * 8);
         }
 
         bool isSmallInt() const noexcept {
@@ -216,7 +223,8 @@ namespace pimii {
         }
 
         void transferBytesTo(SmallInteger start, ObjectPointer dest, SmallInteger destStart, SmallInteger byteLength) {
-            if (start < 0 || destStart < 0 || byteLength > byteSize() - start || byteLength > dest.byteSize() - destStart) {
+            if (start < 0 || destStart < 0 || byteLength > byteSize() - start ||
+                byteLength > dest.byteSize() - destStart) {
                 throw std::range_error("byteLength index out of range.");
             }
             std::memcpy(reinterpret_cast<char*>(&dest.buffer()->fields[0]) + destStart,
@@ -226,7 +234,8 @@ namespace pimii {
 
         void
         transferFieldsTo(SmallInteger start, ObjectPointer dest, SmallInteger destStart, SmallInteger numberOfFields) {
-            if (start < 0 || destStart < 0 || numberOfFields > size() - start || numberOfFields > dest.size() - destStart) {
+            if (start < 0 || destStart < 0 || numberOfFields > size() - start ||
+                numberOfFields > dest.size() - destStart) {
                 throw std::range_error("numberOfFields index out of range.");
             }
             std::memcpy(&dest.object()->fields[destStart], &object()->fields[start], numberOfFields * sizeof(Word));
@@ -284,7 +293,7 @@ namespace pimii {
         }
 
         SmallInteger size() const {
-            return static_cast<SmallInteger>(unmask()->size & sizeMask());
+            return static_cast<SmallInteger>(pointer()->size & sizeMask());
         }
 
         SmallInteger byteSize() const {

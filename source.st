@@ -209,32 +209,35 @@ right: length
     (length < 0) ifTrue: [ ^self from: 1 to: self length + length ].
     ^String empty.
 ------------------------
-startsWith: aString
-    (aString isEmpty) ifTrue: [ ^true ].
+contains: aString at: startIndex
+    (startIndex > self length) ifTrue: [ ^false ].
     (aString length > self length) ifTrue: [ ^false ].
     1 to: aString length do: [ :index |
         ((aString at: index) = (self at: index)) ifFalse: [ ^false ].
     ].
-
     ^true.
+------------------------
+startsWith: aString
+    ^self contains: aString at: 0.
 ------------------------
 endsWith: aString
     | checkIndex |
     (aString isEmpty) ifTrue: [ ^true ].
     (aString length > self length) ifTrue: [ ^false ].
-    checkIndex := self length.
-    aString length to: 1 do: [ :index |
-        ((aString at: index) = (self at: checkIndex)) ifFalse: [ ^false ].
-        checkIndex := checkIndex - 1.
-    ].
+    checkIndex := self length - aString length + 1.
 
-    ^true.
+    self contains aString at: checkIndex.
 ------------------------
 indexOf: aString
+    (aString isEmpty) ifTrue: [ ^1 ].
+    (aString length > self length) ifTrue: [ ^0 ].
+    1 to: self length - aString length do: [ :start |
+        (self contains: aString at: start) ifTrue: [ ^start ].
+    ].
     ^0.
 ------------------------
 contains: aString
-    ^false.
+    ^(self indexOf: aString) > 0.
 ------------------------
 toUpperCase
     | result |
@@ -257,13 +260,6 @@ rightPadWith: aCharacter to: size
     (self length >= size) ifTrue: [ ^self ].
 
     ^(aCharacter repeat: size - self length) , self.
-------------------------
-centerPadWith: aCharacter to: size
-    | half |
-    (self length >= size) ifTrue: [ ^self ].
-    half := (size - self length) // 2.
-
-    ^(aCharacter repeat: half) , self , (aCharacter repeat: size - self length - half).
 ------------------------
 limitTo: size
     (self length <= size) ifTrue: [ ^self ].
@@ -335,6 +331,14 @@ isAlpha
 isAlphaNumeric
     ^self isDigit or: [ self isAlphaNumeric].
 ------------------------
+isWhitespace
+    (self value ==  9) ifTrue: [ ^true ].
+    (self value == 10) ifTrue: [ ^true ].
+    (self value == 13) ifTrue: [ ^true ].
+    (self value == 32) ifTrue: [ ^true ].
+
+    ^false.
+------------------------
 asString
     | result |
     result := String alloc: 2.
@@ -347,6 +351,109 @@ repeat: amount
     1 to: amount do: [ :index | result at: index put: self ].
     ^result.
 ------------------------
+
+
+Class: Reader
+Superclass: Object
+Instance Fields: string index
+
+Methods: Reader
+------------------------
+string: aString
+    string := aString.
+    index := 1.
+    ^self.
+------------------------
+next
+    ^self next: 0.
+------------------------
+next: offset
+    (index + offset > string length) ifTrue: [ ^nil ].
+    ^string at: index + offset.
+------------------------
+consume
+    | result |
+    (index > string length) [ ^nil ].
+    result := string at: index.
+    index := index + 1.
+    ^result.
+------------------------
+while: checkBlock do: consumeBlock
+    | next |
+    [ next := self next.
+      next ifNil: [ ^self ].
+      checkBlock value: next ] whileTrue: [
+      consumeBlock value: (self consume).
+    ].
+------------------------
+consumeWhile: checkBlock
+    | next |
+    [ next := self next.
+      next ifNil: [ ^self ].
+      checkBlock value: next ] whileTrue: [ self consume ].
+------------------------
+
+Class: Token
+Superclass: Object
+Instance Fields: type value
+
+Class Methods: Token
+------------------------
+withType: aSymbol andValue: aString
+    | result |
+    result := Token new.
+    result type: aSymbol.
+    result value: aString.
+    ^result.
+------------------------
+
+Methods: Token
+------------------------
+type: aSymbol
+    type := aSymbol.
+------------------------
+value: aString
+    value := aString.
+------------------------
+type
+    ^type.
+------------------------
+value
+    ^value.
+------------------------
+asString
+    | result |
+
+    result := StringBuilder new.
+    result append: type.
+    result append: ' ('.
+    result append: value.
+    result append: ')'.
+    ^result asString.
+------------------------
+
+Class: Tokenizer
+Superclass: Object
+Instance Fields: reader buffer
+
+Methods: Tokenizer
+------------------------
+reader: aReader
+    reader := aReader.
+    buffer := LinkedList new.
+    ^self.
+------------------------
+read
+    reader consumeWhile: [ :char | char isWhitespace ].
+
+    reader next ifNil: [ ^nil ].
+    (reader next isDigit) ifTrue: [
+        ^Token withType: #Number andValue: '0'.
+    ].
+
+    ^nil.
+------------------------
+
 
 Methods: Nil
 ------------------------
@@ -526,172 +633,6 @@ println: anObject
     self cr.
 ------------------------
 
-Class: InputEvent
-Superclass: Object
-Instance Fields: type key button col row
-
-Methods: InputEvent
-------------------------
-key
-    ^key.
-------------------------
-
-Class: Point
-Superclass: Object
-Instance Fields: x y
-
-Class Methods: Point
-------------------------
-x: newX y: newY
-    | point |
-    point := self new.
-    point x: newX.
-    point y: newY.
-    ^point.
-------------------------
-
-Methods: Point
-------------------------
-x
-    ^x.
-------------------------
-y
-    ^y.
-------------------------
-x: newX
-    x := newX.
-    ^self.
-------------------------
-y: newY
-    y := newY.
-    ^self.
-------------------------
-+ aPoint
-    ^Point x: x + aPoint x y: y + aPoint y.
-------------------------
-* aScalar
-    ^Point x: x * aScalar y: y * aScalar.
-------------------------
-asString
-    | builder |
-    builder := StringBuilder new.
-    builder append: x.
-    builder append: '@'.
-    builder append: y.
-    ^builder asString.
-------------------------
-
-Class: Rectangle
-Superclass: Object
-Instance Fields: origin dimensions
-
-Class Methods: Rectangle
-------------------------
-origin: aPoint dimensions: anotherPoint
-    | rect |
-    rect := self new.
-    rect origin: aPoint.
-    rect dimensions: anotherPoint.
-    ^rect.
-------------------------
-
-Methods: Rectangle
-------------------------
-origin
-    ^origin.
-------------------------
-dimensions
-    ^dimensions.
-------------------------
-origin: aPoint
-    origin := aPoint.
-    ^self.
-------------------------
-dimensions: aPoint
-    dimensions := aPoint.
-    ^self.
-------------------------
-contains: aPoint
-    aPoint x < origin x ifTrue: [ ^false. ].
-    aPoint y < origin y ifTrue: [ ^false. ].
-
-    aPoint x > (origin x + dimensions x) ifTrue: [ ^false. ].
-    aPoint y > (origin y + dimensions y) ifTrue: [ ^false. ].
-
-    ^true.
-------------------------
-intersects: aRect
-    aRect origin x > (origin x + dimensions x) ifTrue: [ ^false. ].
-    aRect origin y > (origin y + dimensions y) ifTrue: [ ^false. ].
-
-    (aRect origin x + aRect dimensions x) < origin x ifTrue: [ ^false. ].
-    (aRect origin y + aRect dimensions y) < origin y ifTrue: [ ^false. ].
-
-    ^true.
-------------------------
-
-Methods: SmallInteger
-------------------------
-@ other
-    ^Point x: self y: other.
-------------------------
-
-Class: Component
-Superclass: Object
-Instance Fields: rect
-
-Methods: Component
-------------------------
-redraw: requiredRect
-    ^nil.
-------------------------
-at: localPoint inColor: aColorIndex put: aString
-    | pos |
-    localPoint y >= rect dimensions y ifTrue: [ ^self. ].
-    localPoint x + aString size >= rect dimensions x ifTrue: [
-
-    ].
-
-    pos := localPoint + rect origin.
-
-    pos y < 0 ifTrue: [ ^self. ].
-
-    pos x < 0 ifTrue: [
-        pos x negate >= aString size ifTrue: [ ^self. ].
-        aString := aString left: pos x.
-        pos x: 0.
-    ].
-
-
-    ^self.
-------------------------
-
-Class: RenderContext
-Superclass: Object
-Instance Fields: parent offset dimensions currentColor
-
-Class Methods: RenderContext
-------------------------
-withParent: aParent offset: localOffset dimensions: dimensions
-    | ctx |
-    ctx := self new.
-    parent := aParent.
-    aParent notNil ifTrue: [
-        currentColor := aParent color.
-        offset = aParent offset + localOffset.
-
-    ].
-------------------------
-
-Methods: RenderContext
-------------------------
-
-at: aPoint startWith: leftString repeat: filler endWith: endString
-    ^nil.
-------------------------
-
-
-
 Class: Link
 Superclass: Object
 Instance Fields: value next
@@ -722,9 +663,16 @@ Methods: LinkedList
 append: aValue
     | nextLink |
     nextLink := Link new value: aValue.
-    tail isNil ifTrue: [ head := nextLink. tail := nextLink. ]
-               otherwise: [ tail next: nextLink. tail := nextLink. ].
+    tail isNil ifTrue:  [ head := nextLink. tail := nextLink. ]
+               ifFalse: [ tail next: nextLink. tail := nextLink. ].
     ^self.
+------------------------
+popHead
+    | node |
+    head ifNil: [ ^nil ].
+    node := head.
+    head := node next.
+    ^node value.
 ------------------------
 each: aBlock
     | node |
@@ -916,7 +864,7 @@ Superclass: Object
 Class Methods: System
 ------------------------
 allClasses
-    SmallTalk do: [ :a | (a value is: Class) ifTrue: [ Terminal at: 0 @ 0 color: 0 put: a key plainString ] ].
+    SmallTalk do: [ :a | (a value is: Class) ifTrue: [ Terminal println: a key plainString ] ].
 ------------------------
 
 Class: ByteArray
