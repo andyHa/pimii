@@ -329,7 +329,7 @@ isAlpha
     ^self isUpper or: [ self isLower].
 ------------------------
 isAlphaNumeric
-    ^self isDigit or: [ self isAlphaNumeric].
+    ^self isDigit or: [ self isAlpha].
 ------------------------
 isWhitespace
     (self value ==  9) ifTrue: [ ^true ].
@@ -434,26 +434,185 @@ asString
 
 Class: Tokenizer
 Superclass: Object
-Instance Fields: reader buffer
+Instance Fields: reader current next
+Class Fields: endOfInput
+
+Class Methods: Tokenizer
+------------------------
+init
+    endOfInput := Token withType: #EOI andValue: ''.
+    ^self.
+------------------------
 
 Methods: Tokenizer
 ------------------------
 reader: aReader
     reader := aReader.
-    buffer := LinkedList new.
+    current := self read.
+    next := self read.
     ^self.
 ------------------------
-read
-    reader consumeWhile: [ :char | char isWhitespace ].
-
-    reader next ifNil: [ ^nil ].
-    (reader next isDigit) ifTrue: [
-        ^Token withType: #Number andValue: '0'.
+current
+    ^current.
+------------------------
+next
+    ^next.
+------------------------
+consume
+    | result |
+    result := current.
+    (result == endOfInput) ifFalse: [
+        current := next.
+        next := self read.
     ].
 
-    ^nil.
+    ^result.
 ------------------------
+read
+------------------------
+skipWhitespace
+    reader consumeWhile: [ :char | char isWhitespace ].
+------------------------
+skipComment
+    reader consume.
+    reader consumeWhile: [ :char | char <> $" ].
+    reader consume.
+------------------------
+read
+    self skipWhitespace.
 
+    [reader next == $"] whileTrue: [
+        self skipComment.
+        self skipWhitespace.
+    ].
+
+    reader next ifNil: [ ^endOfInput ].
+
+    (reader next isDigit) ifTrue: [
+        ^self readNumber.
+    ].
+
+    (reader next isAlpha) ifTrue: [
+        ^self readToken.
+    ].
+
+    (reader next == $^) ifTrue: [
+        ^Token withType: #Caret andValue: '^'.
+    ].
+
+    (reader next == $;) ifTrue: [
+        ^Token withType: #Semicolon andValue: ';'.
+    ].
+
+    (reader next == $.) ifTrue: [
+        ^Token withType: #Fullstop andValue: '.'.
+    ].
+
+    (reader next == $() ifTrue: [
+        ^Token withType: #LeftBracket andValue: '('.
+    ].
+
+    (reader next == $)) ifTrue: [
+        ^Token withType: #RightBracket andValue: ')'.
+    ].
+
+    (reader next == $[) ifTrue: [
+        ^Token withType: #LeftAngularBracket andValue: '['.
+    ].
+
+    (reader next == $.) ifTrue: [
+        ^Token withType: #RightAngularBracket andValue: ']'.
+    ].
+
+    (reader next == $#) ifTrue: [
+        ^self readSymbol.
+    ].
+
+    (reader next == $') ifTrue: [
+        ^self readString.
+    ].
+
+    (reader next == $: & (reader next: 1) == $=) ifTrue: [
+        ^Token withType: #Assignment andValue: ':='.
+    ].
+
+    (reader next == $$) ifTrue: [
+        ^self readCharacter.
+    ].
+
+    (self isOperator: reader next) ifTrue: [
+        ^self readOperator.
+    ].
+
+    ^self readInvalid.
+------------------------
+readNumber
+    | value |
+    value := StringBuilder new.
+    reader while: [ :char | char isDigit ] do: [ :char | value append: char].
+    (reader next == $. & (reader next: 1) isDigit) ifTrue: [
+        value append: reader consume.
+        reader while: [ :char | char isDigit ] do: [ :char | value append: char].
+    ].
+
+    ^Token withType: #Number andValue: value asString.
+------------------------
+readToken
+    | value |
+    value := StringBuilder new.
+    reader while: [ :char | char isAlphaNumeric ] do: [ :char | value append: char].
+    (reader next == $:) ifTrue: [
+        value append: reader consume.
+        ^Token withType: #ColonToken andValue: value asString.
+    ].
+
+    ^Token withType: #Token andValue: value asString.
+------------------------
+readSymbol
+    | value |
+    value := StringBuilder new.
+    reader consume.
+    reader while: [ :char | char isAlphaNumeric ] do: [ :char | value append: char].
+
+    ^Token withType: #Symbol andValue: value asString asSymbol.
+------------------------
+readString
+    | value |
+    reader consume.
+    value := StringBuilder new.
+    reader while: [ :char | char <> $' ] do: [ :char |
+        (char == $\) ifTrue:  [ value append: reader consume ]
+                     ifFalse: [ value append: char ].
+    ].
+    reader consume.
+
+    ^Token withType: #String andValue: value asString.
+------------------------
+readCharacter
+    | value |
+    reader consume.
+    ^Token withType: #Character andValue: reader consume.
+------------------------
+isOperator: char
+    (60 to: 64 contains: char value) ifTrue: [ ^true].
+    (36 to: 38 contains: char value) ifTrue: [ ^true].
+    (42 to: 47 contains: char value) ifTrue: [ ^true].
+    ^char == $\.
+------------------------
+readOperator
+    | value |
+    value := StringBuilder new.
+    reader while: [ :char | self isOperator: char ] do: [ :char | value append: char].
+
+    ^Token withType: #Operator andValue: value asString.
+------------------------
+readInvalid
+    | value |
+    value := StringBuilder new.
+    reader while: [ :char | char isWhitespace not ] do: [ :char | value append: char].
+
+    ^Token withType: #Invalid andValue: value asString.
+------------------------
 
 Methods: Nil
 ------------------------

@@ -45,9 +45,9 @@ namespace pimii {
         allocationIndex = rootEndIndex;
         endIndex = size;
 */
-        basePointer = static_cast<Word*>(calloc(4000000, sizeof(Word)));
-        memset(basePointer, 0, 4000000 * sizeof(Word));
-        size = 4000000;
+        basePointer = static_cast<Word*>(calloc(16000000, sizeof(Word)));
+        memset(basePointer, 0, 16000000 * sizeof(Word));
+        size = 16000000;
         rootAllocationIndex = 1;
         rootEndIndex = 2048;
         allocationIndex = rootEndIndex;

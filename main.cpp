@@ -49,7 +49,7 @@ int main() {
             //  "Terminal at: 0 @ 0 color: 0 put: (#true asString). Terminal draw.",
             //   "Terminal at: 0 @ 0 color: 0 put: ((Rectangle origin: 16@1 dimensions: 10@10) intersects: (Rectangle origin: 5@5 dimensions: 10@10) ) asString.",
         //    "Terminal println: 'Hello World'. [ true ] whileTrue: [ Terminal print: 'REPL> '. InputSemaphore wait. [Terminal nextEvent] whileNotNil: [ :event | Terminal println: event. ] ].",
-            "Terminal println: ((Tokenizer new) reader: (Reader new string: '   3 + 4')) read.",
+            "Terminal println: ((Tokenizer new) reader: (Reader new string: '\"A pointless comment \"|:= #Hello self:(\\'HAL\\\\\\'LO\\' + 4')) current.",
             errors);
 
     pimii::Compiler compiler(tokenizer, errors, sys.typeArray());
