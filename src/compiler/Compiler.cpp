@@ -313,7 +313,6 @@ namespace pimii {
     }
 
     std::unique_ptr<Expression> Compiler::selectorCall(std::unique_ptr<Expression> receiver) {
-        receiver = binaryCall(std::move(receiver));
         if (tokenizer.current().type != COLON_NAME) {
             return receiver;
         }

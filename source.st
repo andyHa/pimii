@@ -356,6 +356,14 @@ repeat: amount
 Class: Reader
 Superclass: Object
 Instance Fields: string index
+Class Fields: endOfInput
+
+Class Methods: Reader
+------------------------
+init
+    endOfInput := $27.
+    ^self.
+------------------------
 
 Methods: Reader
 ------------------------
@@ -368,12 +376,12 @@ next
     ^self next: 0.
 ------------------------
 next: offset
-    (index + offset > string length) ifTrue: [ ^nil ].
+    (index + offset > string length) ifTrue: [ ^$27 ].
     ^string at: index + offset.
 ------------------------
 consume
     | result |
-    (index > string length) [ ^nil ].
+    (index > string length) ifTrue: [ ^$27 ].
     result := string at: index.
     index := index + 1.
     ^result.
@@ -381,7 +389,7 @@ consume
 while: checkBlock do: consumeBlock
     | next |
     [ next := self next.
-      next ifNil: [ ^self ].
+      (next == endOfInput) ifTrue: [ ^self ].
       checkBlock value: next ] whileTrue: [
       consumeBlock value: (self consume).
     ].
@@ -389,7 +397,7 @@ while: checkBlock do: consumeBlock
 consumeWhile: checkBlock
     | next |
     [ next := self next.
-      next ifNil: [ ^self ].
+      (next == endOfInput) ifTrue: [ ^self ].
       checkBlock value: next ] whileTrue: [ self consume ].
 ------------------------
 
@@ -486,7 +494,7 @@ read
         self skipWhitespace.
     ].
 
-    reader next ifNil: [ ^endOfInput ].
+    (reader next == $27) ifTrue: [ ^Token withType: #EOI andValue: '' ].
 
     (reader next isDigit) ifTrue: [
         ^self readNumber.
@@ -613,6 +621,141 @@ readInvalid
 
     ^Token withType: #Invalid andValue: value asString.
 ------------------------
+
+Class: Compiler
+Superclass: Object
+Instance Fields: tokenizer class primitiveValue error
+
+Methods: Compiler
+------------------------
+compile: aString forClass: aClass
+    tokenizer := Tokenizer new reader: (Reader new string: aString).
+    class := aClass.
+    (self handleSimpleAccessor) ifTrue: [ ^self ].
+    (tokenizer current value = '|') ifTrue: [ self parseTemporaries ].
+    (tokenizer current value = '<') ifTrue: [ self parsePrimitive ].
+    [ self success & (tokenizer current type <> #EOI)] whileTrue: [
+        Terminal println: self parseStatement.
+        (tokenizer current type <> #EOI) ifTrue: [ self consumeExpectedToken: '.' ].
+    ].
+
+    (self failed) ifTrue: [ Terminal println: error ].
+
+    ^self.
+------------------------
+handleSimpleAccessor
+    | field |
+    (tokenizer current type == #Caret) ifTrue: [
+        field := tokenizer next value.
+    ].
+    ^false.
+------------------------
+parsePrimitive
+    self consumeExpectedToken: '<'.
+    self consumeExpectedToken: 'Primitive:'.
+    primitiveValue := tokenizer consume value.
+    self consumeExpectedToken: '>'.
+    Terminal println: primitiveValue.
+------------------------
+consumeExpectedToken: aString
+    | token |
+    token := tokenizer consume value.
+    (token <> aString) ifTrue: [ self error: 'Unexpected Token: "' , token , '". Expected: "' , aString , '".' ].
+    ^token.
+------------------------
+error: aString
+    (error <> nil) ifTrue: [ ^self ].
+    error := aString.
+    ^self.
+------------------------
+failed
+    ^error notNil.
+------------------------
+success
+    ^error isNil.
+------------------------
+error
+    ^error.
+------------------------
+parseStatement
+    (tokenizer current type == #Caret) ifTrue: [ ^self parseReturn ].
+    (tokenizer next type == #Assignment) ifTrue: [ ^self parseAssignment ].
+    ^self parseExpression.
+------------------------
+parseExpression
+    ^self parseSelectorCall: (self parseBinaryCall: (self parseUnaryCall: self atom)).
+------------------------
+parseSelectorCall: receiver
+    (tokenizer current type == #ColonToken) ifFalse: [ ^receiver ].
+    receiver := MethodCall new receiver: receiver.
+
+    [ tokenizer current type == #ColonToken ] whileTrue: [
+        receiver addToSelector: tokenizer consume value.
+        receiver addArgument: (self binaryCall: (self unaryCall: self atom)).
+    ].
+
+    ^receiver.
+------------------------
+parseBinaryCall: receiver
+    [ tokenizer current type == #Operator ] whileTrue: [
+        receiver := ((MethodCall new receiver: receiver) addToSelector: tokenizer consume value) addArgument: (self parseUnaryCall: self atom).
+    ].
+    ^receiver.
+------------------------
+parseUnaryCall: receiver
+    [ tokenizer current type == #Token ] whileTrue: [
+        receiver := (MethodCall new receiver: receiver) addToSelector: tokenizer consume value.
+    ].
+    ^receiver.
+------------------------
+atom
+    (tokenizer current type == #LeftBracket) ifTrue: [ ^self parseBrackets ].
+    (tokenizer current type == #LeftAngularBracket) ifTrue: [ ^self parseBlock ].
+    (tokenizer current type == #Symbol) ifTrue: [ ^self pushConstant: tokenizer consume value ].
+    (tokenizer current type == #String) ifTrue: [ ^self pushConstant: tokenizer consume value ].
+    (tokenizer current type == #Number) ifTrue: [ ^self pushConstant: tokenizer consume value ].
+    (tokenizer current type == #Token) ifTrue: [ ^self pushName: tokenizer consume value ].
+
+    self error: 'Unknown atom: ' , tokenizer consume value.
+    ^self pushConstant: 0.
+------------------------
+pushName
+
+------------------------
+
+Class: AstNode
+Superclass: Object
+
+Class: MethodCall
+Superclass: AstNode
+Instance Fields: receiver selector arguments
+
+Methods: MethodCall
+------------------------
+receiver: aReceiver
+    receiver := aReceiver.
+    ^self.
+------------------------
+selector: aString
+    receiver := aReceiver.
+    ^self.
+------------------------
+addToSelector: aString
+    selector ifNil: [ selector := aString. ^self ].
+    select := selector , aString.
+    ^self.
+------------------------
+addArgument: anArgument
+    arguments ifNil: [ arguments := LinkedList new. ].
+    arguments append: anArgument.
+    ^self.
+------------------------
+asString
+    ^'MethodCall: ' , selector.
+------------------------
+
+
+
 
 Methods: Nil
 ------------------------
